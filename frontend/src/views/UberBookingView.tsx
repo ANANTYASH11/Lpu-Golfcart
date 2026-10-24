@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useTheme } from '../theme/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../api/client';
+import { sseClient } from '../api/sse';
 import {
   ArrowLeft,
   MapPin,
@@ -27,6 +28,14 @@ import {
   Zap,
   Car,
   Info,
+  CreditCard,
+  Wallet,
+  Banknote,
+  Star,
+  Check,
+  Calendar,
+  AlertTriangle,
+  RotateCcw,
 } from 'lucide-react';
 
 import {
@@ -46,9 +55,10 @@ import {
   RouteResult,
 } from '../utils/campusRouter';
 
-// Verified LPU Campus Stops with Exact OSM Coordinates
+// Verified LPU Campus Stops with Exact OSM Coordinates and Database IDs
 export interface CampusStop {
   id: string;
+  backendId: number;
   name: string;
   fullName: string;
   code: string;
@@ -62,6 +72,7 @@ export interface CampusStop {
 export const LPU_CAMPUS_STOPS: CampusStop[] = [
   {
     id: 'stop-main-gate',
+    backendId: 1,
     name: 'Main Gate',
     fullName: 'Main Gate (NH-44 Entry Complex)',
     code: 'MG-01',
@@ -72,6 +83,7 @@ export const LPU_CAMPUS_STOPS: CampusStop[] = [
   },
   {
     id: 'stop-unimall',
+    backendId: 2,
     name: 'Uni-Mall',
     fullName: 'Uni-Mall Commercial Centre',
     code: 'UM-02',
@@ -83,6 +95,7 @@ export const LPU_CAMPUS_STOPS: CampusStop[] = [
   },
   {
     id: 'stop-library',
+    backendId: 6,
     name: 'Central Library',
     fullName: 'Central Library & Unipolis',
     code: 'LIB',
@@ -94,6 +107,7 @@ export const LPU_CAMPUS_STOPS: CampusStop[] = [
   },
   {
     id: 'stop-block32',
+    backendId: 3,
     name: 'Block 32',
     fullName: 'Block 32 (Computer Science & Eng)',
     code: 'B32',
@@ -105,6 +119,7 @@ export const LPU_CAMPUS_STOPS: CampusStop[] = [
   },
   {
     id: 'stop-block34',
+    backendId: 4,
     name: 'Block 34',
     fullName: 'Block 34 (Engineering Labs Complex)',
     code: 'B34',
@@ -112,10 +127,11 @@ export const LPU_CAMPUS_STOPS: CampusStop[] = [
     coords: [75.705573, 31.256809],
     buildingName: 'Block 32 & 34 (Engineering Complex)',
     buildingCategory: 'academic',
-    servesShuttle: false, // Pedestrian inner courtyard
+    servesShuttle: false,
   },
   {
     id: 'stop-block38',
+    backendId: 5,
     name: 'Block 38',
     fullName: 'Block 38 (Mittal School of Business)',
     code: 'B38',
@@ -127,6 +143,7 @@ export const LPU_CAMPUS_STOPS: CampusStop[] = [
   },
   {
     id: 'stop-girls-hostels',
+    backendId: 7,
     name: 'Girls Hostels',
     fullName: 'Girls Hostel Complex (GH 1-6)',
     code: 'GH',
@@ -138,6 +155,7 @@ export const LPU_CAMPUS_STOPS: CampusStop[] = [
   },
   {
     id: 'stop-boys-hostels',
+    backendId: 8,
     name: 'Boys Hostels',
     fullName: 'Boys Hostel Complex (BH 1-8)',
     code: 'BH',
@@ -149,6 +167,7 @@ export const LPU_CAMPUS_STOPS: CampusStop[] = [
   },
   {
     id: 'stop-health',
+    backendId: 10,
     name: 'Health Centre',
     fullName: 'University Hospital & Health Centre',
     code: 'HOSP',
@@ -156,10 +175,11 @@ export const LPU_CAMPUS_STOPS: CampusStop[] = [
     coords: [75.70355, 31.25545],
     buildingName: 'University Health Centre',
     buildingCategory: 'medical',
-    servesShuttle: false, // Priority emergency & cart access
+    servesShuttle: false,
   },
   {
     id: 'stop-auditorium',
+    backendId: 9,
     name: 'Auditorium',
     fullName: 'Shanti Devi Mittal Auditorium',
     code: 'AUD',
@@ -171,77 +191,14 @@ export const LPU_CAMPUS_STOPS: CampusStop[] = [
   },
 ];
 
-interface LiveFleetVehicle {
-  id: string;
-  type: 'shuttle' | 'cart' | 'rickshaw';
-  plate: string;
-  driverName: string;
-  phone: string;
-  rating: string;
-  trips: string;
-  coords: [number, number];
-  available: boolean;
-  seats: number;
-}
-
-const INITIAL_FLEET: LiveFleetVehicle[] = [
-  {
-    id: 'shuttle-01',
-    type: 'shuttle',
-    plate: 'PB-08-BS-01',
-    driverName: 'Harpreet Singh',
-    phone: '+91 98765 11001',
-    rating: '4.88',
-    trips: '2,840 trips',
-    coords: [75.7061, 31.2572],
-    available: true,
-    seats: 28,
-  },
-  {
-    id: 'cart-04',
-    type: 'cart',
-    plate: 'PB-08-GC-04',
-    driverName: 'Gurpreet Singh',
-    phone: '+91 98765 43210',
-    rating: '4.95',
-    trips: '1,420 trips',
-    coords: [75.7042, 31.2551],
-    available: true,
-    seats: 4,
-  },
-  {
-    id: 'cart-07',
-    type: 'cart',
-    plate: 'PB-08-GC-07',
-    driverName: 'Davinder Kumar',
-    phone: '+91 98765 43217',
-    rating: '4.89',
-    trips: '930 trips',
-    coords: [75.7039, 31.2488],
-    available: true,
-    seats: 4,
-  },
-  {
-    id: 'rickshaw-12',
-    type: 'rickshaw',
-    plate: 'PB-08-ER-12',
-    driverName: 'Surjit Ram',
-    phone: '+91 98765 88212',
-    rating: '4.82',
-    trips: '3,110 trips',
-    coords: [75.7065, 31.2598],
-    available: true,
-    seats: 3,
-  },
-];
-
 interface UberBookingViewProps {
   onBack: () => void;
 }
 
-type FlowStep = 'search' | 'options' | 'finding' | 'assigned';
+type FlowStep = 'search' | 'options' | 'finding' | 'assigned' | 'completed';
 type RideType = 'shuttle' | 'cart' | 'rickshaw';
 type SheetSnap = 'peek' | 'half' | 'full';
+type PaymentMethodType = 'CASH' | 'WALLET' | 'RAZORPAY';
 
 export default function UberBookingView({ onBack }: UberBookingViewProps) {
   const { mode, tokens, toggleTheme } = useTheme();
@@ -254,16 +211,39 @@ export default function UberBookingView({ onBack }: UberBookingViewProps) {
   const [selectedRide, setSelectedRide] = useState<RideType>('cart');
   const [sheetSnap, setSheetSnap] = useState<SheetSnap>('half');
 
+  // Now vs Schedule state
+  const [scheduleType, setScheduleType] = useState<'now' | 'schedule'>('now');
+  const [scheduledTime, setScheduledTime] = useState<string>('');
+  const [passengerCount, setPassengerCount] = useState<number>(1);
+
+  // Payment method selection
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethodType>('CASH');
+
   // Route State
   const [routeInfo, setRouteInfo] = useState<RouteResult | null>(null);
   const [isRouting, setIsRouting] = useState(false);
 
-  // Live Fleet State
-  const [fleet, setFleet] = useState<LiveFleetVehicle[]>(INITIAL_FLEET);
+  // Server-Side Real Fare Engine Quotes
+  const [fareQuotes, setFareQuotes] = useState<Record<string, any>>({});
+  const [loadingFares, setLoadingFares] = useState(false);
 
-  // Driver Assignment State
-  const [assignedVehicle, setAssignedVehicle] = useState<LiveFleetVehicle>(INITIAL_FLEET[1]);
-  const [driverEtaMins, setDriverEtaMins] = useState(2);
+  // Active Booking from Database State Machine
+  const [activeBooking, setActiveBooking] = useState<any>(null);
+  const [bookingLoading, setBookingLoading] = useState(false);
+  const [bookingError, setBookingError] = useState<string | null>(null);
+
+  // Rating & Completion Feedback State
+  const [ratingVal, setRatingVal] = useState<number>(5);
+  const [feedbackText, setFeedbackText] = useState<string>('');
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [ratingSubmitted, setRatingSubmitted] = useState<boolean>(false);
+
+  // Cancellation Modal State
+  const [cancelModalOpen, setCancelModalOpen] = useState(false);
+  const [cancelReason, setCancelReason] = useState('Changed plans');
+
+  // No-Show Watchdog Timer (Seconds remaining)
+  const [noShowSecondsLeft, setNoShowSecondsLeft] = useState<number | null>(null);
 
   // Map Provider & Error State
   const [mapProvider, setMapProvider] = useState<MapProvider>(MAP_CONFIG.defaultProvider);
@@ -276,21 +256,13 @@ export default function UberBookingView({ onBack }: UberBookingViewProps) {
   const dropoffMarkerRef = useRef<maplibregl.Marker | null>(null);
   const campusStopsMarkersRef = useRef<maplibregl.Marker[]>([]);
   const vehicleMarkersRef = useRef<Record<string, maplibregl.Marker>>({});
-  const flowAnimationRef = useRef<number | null>(null);
 
-  // Synchronized state refs for map event handlers
   const pickupStopRef = useRef(pickupStop);
   pickupStopRef.current = pickupStop;
   const dropoffStopRef = useRef(dropoffStop);
   dropoffStopRef.current = dropoffStop;
-  const selectedRideRef = useRef(selectedRide);
-  selectedRideRef.current = selectedRide;
-  const modeRef = useRef(mode);
-  modeRef.current = mode;
 
-  // Rider priority & pass check
   const isPriorityRider = Boolean(currentUser?.is_priority);
-  const hasStudentPass = Boolean((currentUser as any)?.has_pass);
 
   // Filtered stops for search
   const filteredStops = useMemo(() => {
@@ -304,35 +276,113 @@ export default function UberBookingView({ onBack }: UberBookingViewProps) {
     );
   }, [pickupStop.id, searchQuery]);
 
-  // Find nearest vehicle for currently selected ride type
-  const nearestVehicle = useMemo(() => {
-    const matching = fleet.filter((v) => v.type === selectedRide && v.available);
-    if (matching.length === 0) return null;
-    let closest = matching[0];
-    let minDist = Infinity;
-    matching.forEach((v) => {
-      const d = haversineDistance(v.coords, pickupStop.coords);
-      if (d < minDist) {
-        minDist = d;
-        closest = v;
+  // Check for active student booking on mount
+  useEffect(() => {
+    let isMounted = true;
+    async function checkActiveRide() {
+      try {
+        const active = await api.getActiveStudentBooking();
+        if (isMounted && active && active.id) {
+          setActiveBooking(active);
+          if (active.status === 'REQUESTED') {
+            setStep('finding');
+          } else if (['ACCEPTED', 'ARRIVING', 'PICKED_UP'].includes(active.status)) {
+            setStep('assigned');
+          } else if (active.status === 'COMPLETED') {
+            setStep('completed');
+          }
+        }
+      } catch (err) {
+        console.warn('No active booking found or error checking:', err);
+      }
+    }
+    checkActiveRide();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  // Subscribe to real-time SSE updates for booking FSM changes
+  useEffect(() => {
+    const unsub = sseClient.subscribe((event) => {
+      if (
+        event.event_type === 'GOLF_CART_STATUS_UPDATED' ||
+        event.event_type === 'GOLF_CART_ASSIGNED' ||
+        event.event_type === 'BOOKING_STATUS_CHANGED'
+      ) {
+        const payload = event.payload;
+        if (activeBooking && payload.booking_id === activeBooking.id) {
+          // Re-fetch booking from server to get accurate relations
+          api.getBooking(activeBooking.id)
+            .then((freshBooking) => {
+              setActiveBooking(freshBooking);
+              if (freshBooking.status === 'ACCEPTED' || freshBooking.status === 'ARRIVING' || freshBooking.status === 'PICKED_UP') {
+                setStep('assigned');
+              } else if (freshBooking.status === 'COMPLETED') {
+                setStep('completed');
+              } else if (freshBooking.status === 'CANCELLED' || freshBooking.status === 'NO_SHOW') {
+                setActiveBooking(null);
+                setStep('options');
+                alert(`Ride update: Status is now ${freshBooking.status}.`);
+              }
+            })
+            .catch((e) => console.warn('Error refreshing booking:', e));
+        }
       }
     });
-    const eta = Math.max(1, Math.round(minDist / 250)); // ~15 km/h campus speed
-    return { vehicle: closest, distanceMeters: Math.round(minDist), etaMins: eta };
-  }, [fleet, selectedRide, pickupStop.coords]);
+    return () => unsub();
+  }, [activeBooking]);
 
-  // Shuttle availability check for this stop pair
-  const isShuttleAvailable = useMemo(() => {
-    if (!dropoffStop) return true;
-    return Boolean(pickupStop.servesShuttle && dropoffStop.servesShuttle);
-  }, [pickupStop, dropoffStop]);
+  // No-Show Countdown timer when vehicle is ARRIVING
+  useEffect(() => {
+    if (!activeBooking || activeBooking.status !== 'ARRIVING' || !activeBooking.no_show_deadline) {
+      setNoShowSecondsLeft(null);
+      return;
+    }
 
-  // Available carts check
-  const hasFreeCarts = useMemo(() => {
-    return fleet.some((v) => v.type === 'cart' && v.available);
-  }, [fleet]);
+    const interval = setInterval(() => {
+      const deadline = new Date(activeBooking.no_show_deadline).getTime();
+      const now = new Date().getTime();
+      const diffSec = Math.max(0, Math.floor((deadline - now) / 1000));
+      setNoShowSecondsLeft(diffSec);
+      if (diffSec <= 0) {
+        clearInterval(interval);
+      }
+    }, 1000);
 
-  // Dynamic Camera Framing Function
+    return () => clearInterval(interval);
+  }, [activeBooking]);
+
+  // Fetch real server-side fare quotes whenever pickup or dropoff changes
+  useEffect(() => {
+    if (!dropoffStop) return;
+    let cancelled = false;
+
+    async function loadFares() {
+      setLoadingFares(true);
+      try {
+        const res = await api.calculateFare(pickupStop.backendId, dropoffStop.backendId, null, isPriorityRider);
+        if (!cancelled && res?.options) {
+          const mapped: Record<string, any> = {};
+          res.options.forEach((opt: any) => {
+            mapped[opt.vehicle_type] = opt;
+          });
+          setFareQuotes(mapped);
+        }
+      } catch (err) {
+        console.warn('Fare calculation failed:', err);
+      } finally {
+        if (!cancelled) setLoadingFares(false);
+      }
+    }
+
+    loadFares();
+    return () => {
+      cancelled = true;
+    };
+  }, [pickupStop, dropoffStop, isPriorityRider]);
+
+  // Fit map camera
   const fitCameraToRoute = useCallback(
     (coords: [number, number][], customPitch = 45) => {
       const map = mapRef.current;
@@ -361,7 +411,7 @@ export default function UberBookingView({ onBack }: UberBookingViewProps) {
     [sheetSnap]
   );
 
-  // Core Map Drawing: Snapped Road Route with White Casing & Direction Flow
+  // Core Map Drawing: Snapped Road Route with White Casing
   const renderRouteOnMap = useCallback(
     (map: maplibregl.Map, route: RouteResult, isDark: boolean) => {
       const routeGeoJSON: any = {
@@ -375,9 +425,7 @@ export default function UberBookingView({ onBack }: UberBookingViewProps) {
       const sourceId = 'active-route';
       const casingLayerId = 'active-route-casing';
       const coreLayerId = 'active-route-core';
-      const flowLayerId = 'active-route-flow';
 
-      // 1. Source
       if (map.getSource(sourceId)) {
         (map.getSource(sourceId) as maplibregl.GeoJSONSource).setData(routeGeoJSON);
       } else {
@@ -387,115 +435,50 @@ export default function UberBookingView({ onBack }: UberBookingViewProps) {
         });
       }
 
-      // 2. White casing (in light) / Black casing (in dark) - 8px wide
       if (!map.getLayer(casingLayerId)) {
         map.addLayer({
           id: casingLayerId,
           type: 'line',
           source: sourceId,
-          layout: {
-            'line-join': 'round',
-            'line-cap': 'round',
-          },
+          layout: { 'line-join': 'round', 'line-cap': 'round' },
           paint: {
             'line-color': isDark ? '#000000' : '#FFFFFF',
             'line-width': 8,
-            'line-opacity': route.isApproximate ? 0 : 0.95,
+            'line-opacity': 0.95,
           },
         });
-      } else {
-        map.setPaintProperty(casingLayerId, 'line-color', isDark ? '#000000' : '#FFFFFF');
-        map.setPaintProperty(casingLayerId, 'line-opacity', route.isApproximate ? 0 : 0.95);
       }
 
-      // 3. Core route line - 5px wide, black (light) / white (dark) or dashed grey if approximate
       if (!map.getLayer(coreLayerId)) {
         map.addLayer({
           id: coreLayerId,
           type: 'line',
           source: sourceId,
-          layout: {
-            'line-join': 'round',
-            'line-cap': 'round',
-          },
+          layout: { 'line-join': 'round', 'line-cap': 'round' },
           paint: {
-            'line-color': route.isApproximate
-              ? isDark
-                ? '#A6A6A6'
-                : '#757575'
-              : isDark
-              ? '#FFFFFF'
-              : '#000000',
-            'line-width': route.isApproximate ? 3.5 : 5,
-            'line-dasharray': route.isApproximate ? [2, 2] : [1, 0],
+            'line-color': isDark ? '#FFFFFF' : '#000000',
+            'line-width': 5,
           },
         });
-      } else {
-        map.setPaintProperty(
-          coreLayerId,
-          'line-color',
-          route.isApproximate ? (isDark ? '#A6A6A6' : '#757575') : isDark ? '#FFFFFF' : '#000000'
-        );
-        map.setPaintProperty(coreLayerId, 'line-width', route.isApproximate ? 3.5 : 5);
-        map.setPaintProperty(coreLayerId, 'line-dasharray', route.isApproximate ? [2, 2] : [1, 0]);
-      }
-
-      // 4. Direction Flow animation layer
-      if (!map.getLayer(flowLayerId)) {
-        map.addLayer({
-          id: flowLayerId,
-          type: 'line',
-          source: sourceId,
-          layout: {
-            'line-join': 'round',
-            'line-cap': 'round',
-          },
-          paint: {
-            'line-color': isDark ? '#000000' : '#FFFFFF',
-            'line-width': 2,
-            'line-opacity': route.isApproximate ? 0 : 0.85,
-            'line-dasharray': [0, 4, 3],
-          },
-        });
-      } else {
-        map.setPaintProperty(flowLayerId, 'line-color', isDark ? '#000000' : '#FFFFFF');
-        map.setPaintProperty(flowLayerId, 'line-opacity', route.isApproximate ? 0 : 0.85);
-      }
-
-      // Start cyclical direction flow animation
-      if (flowAnimationRef.current) cancelAnimationFrame(flowAnimationRef.current);
-      let stepIndex = 0;
-      const animateFlow = () => {
-        if (!mapRef.current || !mapRef.current.getLayer(flowLayerId)) return;
-        stepIndex = (stepIndex + 1) % 16;
-        const phase = (stepIndex / 16) * 7;
-        try {
-          mapRef.current.setPaintProperty(flowLayerId, 'line-dasharray', [phase, 4, 3]);
-        } catch {}
-        flowAnimationRef.current = requestAnimationFrame(animateFlow);
-      };
-
-      if (!route.isApproximate) {
-        flowAnimationRef.current = requestAnimationFrame(animateFlow);
       }
     },
     []
   );
 
-  // Fetch road-snapped route & update map
   const updateRoute = useCallback(
-    async (pickup: CampusStop, dropoff: CampusStop) => {
+    async (from: CampusStop, to: CampusStop | null) => {
+      if (!to) return;
       setIsRouting(true);
       try {
-        const route = await calculateRoute(pickup.coords, dropoff.coords);
+        const snappedStart = snapToNearestRoad(from.coords);
+        const snappedEnd = snapToNearestRoad(to.coords);
+        const route = calculateRoute(snappedStart, snappedEnd);
         setRouteInfo(route);
 
         const map = mapRef.current;
-        if (map) {
+        if (map && map.isStyleLoaded()) {
           renderRouteOnMap(map, route, modeRef.current === 'dark');
           fitCameraToRoute(route.coordinates);
-          // Highlight destination building
-          setHighlightedDestinationBuilding(map, dropoff.buildingName, modeRef.current);
         }
       } catch (err) {
         console.warn('Route calculation error:', err);
@@ -506,13 +489,6 @@ export default function UberBookingView({ onBack }: UberBookingViewProps) {
     [fitCameraToRoute, renderRouteOnMap]
   );
 
-  // Re-fit camera when ride option changes
-  useEffect(() => {
-    if (routeInfo && routeInfo.coordinates.length > 0 && mapRef.current) {
-      fitCameraToRoute(routeInfo.coordinates);
-    }
-  }, [selectedRide, fitCameraToRoute, routeInfo]);
-
   // Update building highlight if dropoff or theme changes
   useEffect(() => {
     if (mapRef.current) {
@@ -520,7 +496,10 @@ export default function UberBookingView({ onBack }: UberBookingViewProps) {
     }
   }, [dropoffStop, mode]);
 
-  // 1. Initialize MapLibre Map with OpenFreeMap & setup 3D Buildings
+  const modeRef = useRef(mode);
+  modeRef.current = mode;
+
+  // Initialize MapLibre Map with OpenFreeMap & setup 3D Buildings
   useEffect(() => {
     if (!mapContainerRef.current) return;
     if (mapRef.current) return;
@@ -543,13 +522,7 @@ export default function UberBookingView({ onBack }: UberBookingViewProps) {
     });
 
     mapRef.current = map;
-    if (typeof window !== 'undefined') {
-      (window as any).mapInstance = map;
-      (window as any).LPU_CAMPUS_STOPS = LPU_CAMPUS_STOPS;
-      (window as any).calculateRoute = calculateRoute;
-    }
 
-    // Attribution
     map.addControl(
       new maplibregl.AttributionControl({
         compact: true,
@@ -560,30 +533,6 @@ export default function UberBookingView({ onBack }: UberBookingViewProps) {
       'bottom-right'
     );
 
-    // Fallback error chain
-    let fallbackTriggered = false;
-    map.on('error', (e) => {
-      const errStr = String(e?.error?.message || e?.message || '');
-      if (
-        !fallbackTriggered &&
-        (errStr.includes('404') ||
-          errStr.includes('Failed to fetch') ||
-          errStr.includes('NetworkError') ||
-          errStr.includes('Error loading style'))
-      ) {
-        if (mapProvider === 'openfreemap') {
-          fallbackTriggered = true;
-          setMapProvider('osm');
-        } else if (mapProvider === 'osm') {
-          fallbackTriggered = true;
-          setMapProvider('pmtiles');
-        } else {
-          setMapError(true);
-        }
-      }
-    });
-
-    // Map Load: 3D Buildings, Filter Clutter, Campus Stop Markers, Draggable Pickup Pin
     map.on('load', async () => {
       setMapError(false);
       try {
@@ -593,182 +542,55 @@ export default function UberBookingView({ onBack }: UberBookingViewProps) {
         console.warn('Campus 3D setup error:', err);
       }
 
-      // Add Campus Identity Stop Markers
+      // Add Campus Stop Markers
       campusStopsMarkersRef.current.forEach((m) => m.remove());
       campusStopsMarkersRef.current = [];
 
       LPU_CAMPUS_STOPS.forEach((stop) => {
-        const stopEl = document.createElement('div');
-        stopEl.className = 'flex flex-col items-center group cursor-pointer';
-        stopEl.innerHTML = `
-          <div class="px-1.5 py-0.5 mb-0.5 rounded bg-white/95 dark:bg-black/95 text-black dark:text-white text-[10px] font-bold border border-[#E2E2E2] dark:border-[#333333] shadow-sm whitespace-nowrap opacity-85 group-hover:opacity-100 transition-opacity">
+        const el = document.createElement('div');
+        el.className = 'group cursor-pointer flex flex-col items-center';
+        el.innerHTML = `
+          <div class="px-2 py-0.5 mb-1 bg-black text-white dark:bg-white dark:text-black text-[10px] font-bold rounded shadow-md whitespace-nowrap opacity-90 transition-opacity">
             ${stop.name}
           </div>
-          <div class="w-3.5 h-3.5 rounded-full bg-white dark:bg-black border-2 border-black dark:border-white shadow-md flex items-center justify-center">
-            <div class="w-1.5 h-1.5 rounded-full bg-black dark:bg-white"></div>
-          </div>
+          <div class="w-3 h-3 rounded-full bg-black dark:bg-white border-2 border-white dark:border-black shadow-md"></div>
         `;
-
-        stopEl.addEventListener('click', (e) => {
-          e.stopPropagation();
+        el.onclick = () => {
           handleSelectDropoff(stop);
-        });
-
-        const stopMarker = new maplibregl.Marker({ element: stopEl })
-          .setLngLat(stop.coords)
-          .addTo(map);
-
-        campusStopsMarkersRef.current.push(stopMarker);
+        };
+        const marker = new maplibregl.Marker({ element: el }).setLngLat(stop.coords).addTo(map);
+        campusStopsMarkersRef.current.push(marker);
       });
 
-      // Add Draggable Pickup Pin (White circle, black ring with label)
+      // Draggable Pickup Marker
+      if (pickupMarkerRef.current) pickupMarkerRef.current.remove();
       const pickupEl = document.createElement('div');
       pickupEl.className = 'flex flex-col items-center cursor-grab active:cursor-grabbing';
       pickupEl.innerHTML = `
         <div class="px-2 py-0.5 mb-1 bg-black text-white dark:bg-white dark:text-black text-[11px] font-bold rounded shadow-md whitespace-nowrap border border-white/20">
-          Pickup Pin
+          Pickup: ${pickupStopRef.current.name}
         </div>
-        <div class="w-7 h-7 rounded-full bg-white border-[3px] border-black shadow-2xl flex items-center justify-center">
-          <div class="w-2.5 h-2.5 rounded-full bg-black"></div>
+        <div class="w-6 h-6 rounded-full bg-black dark:bg-white text-white dark:text-black flex items-center justify-center shadow-2xl border-2 border-white dark:border-black">
+          <div class="w-2 h-2 rounded-full bg-white dark:bg-black"></div>
         </div>
       `;
 
-      const pMarker = new maplibregl.Marker({ element: pickupEl, draggable: true })
+      pickupMarkerRef.current = new maplibregl.Marker({ element: pickupEl, draggable: true })
         .setLngLat(pickupStopRef.current.coords)
         .addTo(map);
 
-      // On dragend: snap to nearest campus road or stop
-      pMarker.on('dragend', async () => {
-        const lngLat = pMarker.getLngLat();
-        const snapped = await snapToNearestRoad([lngLat.lng, lngLat.lat]);
-        pMarker.setLngLat(snapped);
-
-        // Find nearest named stop
-        let closest = LPU_CAMPUS_STOPS[0];
-        let minDist = Infinity;
-        LPU_CAMPUS_STOPS.forEach((s) => {
-          const d = haversineDistance(snapped, s.coords);
-          if (d < minDist) {
-            minDist = d;
-            closest = s;
-          }
-        });
-
-        const updatedPickup: CampusStop = {
-          ...closest,
-          coords: snapped,
-        };
-
-        setPickupStop(updatedPickup);
-
-        if (dropoffStopRef.current) {
-          updateRoute(updatedPickup, dropoffStopRef.current);
-        }
-      });
-
-      pickupMarkerRef.current = pMarker;
-
-      // Add Dropoff Pin if already selected
       if (dropoffStopRef.current) {
-        if (dropoffMarkerRef.current) dropoffMarkerRef.current.remove();
-        const dropEl = document.createElement('div');
-        dropEl.className = 'flex flex-col items-center pointer-events-none';
-        dropEl.innerHTML = `
-          <div class="px-2 py-0.5 mb-1 bg-black text-white dark:bg-white dark:text-black text-[11px] font-bold rounded shadow-md whitespace-nowrap border border-white/20">
-            Dropoff: ${dropoffStopRef.current.name}
-          </div>
-          <div class="w-6 h-6 bg-black dark:bg-white text-white dark:text-black flex items-center justify-center shadow-2xl border-2 border-white dark:border-black">
-            <div class="w-2 h-2 bg-white dark:bg-black"></div>
-          </div>
-        `;
-        dropoffMarkerRef.current = new maplibregl.Marker({ element: dropEl })
-          .setLngLat(dropoffStopRef.current.coords)
-          .addTo(map);
-
         updateRoute(pickupStopRef.current, dropoffStopRef.current);
       }
     });
 
     return () => {
-      if (flowAnimationRef.current) cancelAnimationFrame(flowAnimationRef.current);
-      campusStopsMarkersRef.current.forEach((m) => m.remove());
-      Object.values(vehicleMarkersRef.current).forEach((m) => m.remove());
       map.remove();
       mapRef.current = null;
     };
-  }, [mode, mapProvider, updateRoute]);
-
-  // 2. Render Live Fleet Vehicles on Map
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map) return;
-
-    fleet.forEach((v) => {
-      const isSelectedType = v.type === selectedRide;
-      const isNearest = nearestVehicle?.vehicle.id === v.id;
-
-      if (!vehicleMarkersRef.current[v.id]) {
-        const el = document.createElement('div');
-        el.className = 'transition-transform duration-500 ease-out flex flex-col items-center';
-
-        const marker = new maplibregl.Marker({ element: el })
-          .setLngLat(v.coords)
-          .addTo(map);
-
-        vehicleMarkersRef.current[v.id] = marker;
-      }
-
-      const marker = vehicleMarkersRef.current[v.id];
-      marker.setLngLat(v.coords);
-
-      const el = marker.getElement();
-      el.innerHTML = `
-        ${
-          isNearest
-            ? `<div class="px-1.5 py-0.5 mb-0.5 rounded-full bg-[#276EF1] text-white text-[10px] font-extrabold shadow-md whitespace-nowrap animate-bounce">
-                ${nearestVehicle.etaMins}m away
-               </div>`
-            : ''
-        }
-        <div class="w-8 h-8 rounded-full ${
-          isNearest
-            ? 'bg-[#276EF1] text-white ring-2 ring-white dark:ring-black'
-            : isSelectedType
-            ? 'bg-black text-white dark:bg-white dark:text-black ring-1 ring-white/50'
-            : 'bg-[#5E5E5E] text-white opacity-60'
-        } shadow-lg flex items-center justify-center">
-          ${
-            v.type === 'shuttle'
-              ? `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.5 2.8C2.1 10.9 2 11.2 2 11.5V16c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><path d="M9 17h6"/><circle cx="17" cy="17" r="2"/></svg>`
-              : v.type === 'cart'
-              ? `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>`
-              : `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.5 2.8C2.1 10.9 2 11.2 2 11.5V16c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/></svg>`
-          }
-        </div>
-      `;
-    });
-  }, [fleet, selectedRide, nearestVehicle]);
-
-  // Periodic Micro-movement of Live Fleet
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setFleet((prev) =>
-        prev.map((v) => {
-          // Subtle movement loop
-          const deltaLng = (Math.random() - 0.5) * 0.00015;
-          const deltaLat = (Math.random() - 0.5) * 0.00015;
-          return {
-            ...v,
-            coords: [v.coords[0] + deltaLng, v.coords[1] + deltaLat],
-          };
-        })
-      );
-    }, 3500);
-
-    return () => clearInterval(timer);
   }, []);
 
-  // 3. Handle Dropoff Selection
+  // Handle Dropoff Selection
   const handleSelectDropoff = (stop: CampusStop) => {
     setDropoffStop(stop);
     setStep('options');
@@ -776,7 +598,6 @@ export default function UberBookingView({ onBack }: UberBookingViewProps) {
     const map = mapRef.current;
     if (!map) return;
 
-    // Drop Pin (Black square with label)
     if (dropoffMarkerRef.current) dropoffMarkerRef.current.remove();
 
     const dropEl = document.createElement('div');
@@ -794,44 +615,88 @@ export default function UberBookingView({ onBack }: UberBookingViewProps) {
       .setLngLat(stop.coords)
       .addTo(map);
 
-    // Compute and draw road-snapped route
     updateRoute(pickupStop, stop);
   };
 
-  // 4. Confirm Ride -> Finding -> Assigned
-  const handleConfirmRide = () => {
+  // Real Booking Action: calls backend /lastmile/bookings
+  const handleConfirmRide = async () => {
+    if (!dropoffStop) return;
+    setBookingLoading(true);
+    setBookingError(null);
     setStep('finding');
 
-    // Simulate dispatch finding
-    setTimeout(() => {
-      const chosen = nearestVehicle?.vehicle || fleet.find((v) => v.type === selectedRide) || fleet[0];
-      setAssignedVehicle(chosen);
-      setDriverEtaMins(nearestVehicle?.etaMins || 2);
-      setStep('assigned');
-    }, 2000);
+    const vehicleTypeKey =
+      selectedRide === 'shuttle' ? 'SHUTTLE' : selectedRide === 'cart' ? 'GOLF_CART' : 'ERICKSHAW';
+
+    try {
+      const payload: any = {
+        pickup_stop_id: pickupStop.backendId,
+        drop_stop_id: dropoffStop.backendId,
+        passenger_count: passengerCount,
+        vehicle_type: vehicleTypeKey,
+        payment_method: paymentMethod,
+        is_priority: isPriorityRider,
+        scheduled_for: scheduleType === 'schedule' && scheduledTime ? new Date(scheduledTime).toISOString() : null,
+      };
+
+      const result = await api.createBooking(payload);
+      setActiveBooking(result);
+
+      if (result.status === 'ACCEPTED' || result.status === 'ARRIVING') {
+        setStep('assigned');
+      } else {
+        // REQUESTED state: stay on 'finding' until driver acceptance event
+        setStep('finding');
+      }
+    } catch (err: any) {
+      console.error('Booking failed:', err);
+      setBookingError(err.message || 'Failed to place booking request');
+      setStep('options');
+    } finally {
+      setBookingLoading(false);
+    }
   };
 
-  // Render Ride Options Panel Content
+  // Cancel Booking
+  const handleCancelBooking = async () => {
+    if (!activeBooking) return;
+    try {
+      const res = await api.cancelBooking(activeBooking.id, cancelReason);
+      setActiveBooking(null);
+      setCancelModalOpen(false);
+      setStep('options');
+    } catch (err: any) {
+      alert(`Could not cancel: ${err.message}`);
+    }
+  };
+
+  // Rate Booking
+  const handleRateBooking = async () => {
+    if (!activeBooking) return;
+    try {
+      const allFeedback = selectedTags.length > 0 ? `${selectedTags.join(', ')}. ${feedbackText}` : feedbackText;
+      await api.rateBooking(activeBooking.id, ratingVal, allFeedback);
+      setRatingSubmitted(true);
+    } catch (err: any) {
+      alert(`Rating failed: ${err.message}`);
+    }
+  };
+
+  const shuttleQuote = fareQuotes['SHUTTLE'];
+  const cartQuote = fareQuotes['GOLF_CART'];
+  const rickshawQuote = fareQuotes['ERICKSHAW'];
+
+  // Render Ride Options List
   const renderRideOptionsList = () => {
-    // 1. Shuttle
-    const shuttleEta = '4 min';
-    const shuttleTrip = routeInfo ? routeInfo.formattedDuration : '6 min';
-
-    // 2. Golf Cart (Priority vs Campus)
-    const cartEta = nearestVehicle && selectedRide === 'cart' ? `${nearestVehicle.etaMins} min` : '2 min';
-    const cartTrip = routeInfo ? routeInfo.formattedDuration : '5 min';
-
-    // 3. E-Rickshaw
-    const rickshawEta = '3 min';
-    const rickshawTrip = routeInfo ? routeInfo.formattedDuration : '5 min';
+    const isShuttleValid = pickupStop.servesShuttle && dropoffStop?.servesShuttle;
 
     return (
-      <div className="space-y-2.5">
-        {/* 1. Shuttle Option */}
+      <div className="space-y-3">
+        {/* 1. Shuttle Bus */}
         <div
-          onClick={() => isShuttleAvailable && setSelectedRide('shuttle')}
+          onClick={() => isShuttleValid && setSelectedRide('shuttle')}
           className={`p-3.5 rounded-[12px] border transition-all ${
-            !isShuttleAvailable
+            !isShuttleValid
               ? 'opacity-40 border-[#E2E2E2] dark:border-[#333333] cursor-not-allowed bg-transparent'
               : selectedRide === 'shuttle'
               ? 'border-black dark:border-white bg-[#F3F3F3] dark:bg-[#2A2A2A] shadow-sm'
@@ -846,39 +711,31 @@ export default function UberBookingView({ onBack }: UberBookingViewProps) {
               <div>
                 <div className="flex items-center gap-2">
                   <span className="font-bold text-sm text-black dark:text-white">Campus Shuttle</span>
-                  {isShuttleAvailable ? (
-                    <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-[#05A357]/15 text-[#05A357]">
-                      Low crowd
-                    </span>
-                  ) : null}
+                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-[#05A357]/15 text-[#05A357]">
+                    Free Transit
+                  </span>
                 </div>
-                <div className="text-xs text-[#5E5E5E] dark:text-[#A6A6A6]">
-                  {isShuttleAvailable ? (
-                    `${shuttleEta} away · ${shuttleTrip} trip · 28 seats`
+                <div className="text-xs text-[#5E5E5E] dark:text-[#A6A6A6] mt-0.5">
+                  {isShuttleValid ? (
+                    'Fixed loop schedule · High capacity'
                   ) : (
-                    <span className="text-[#E11900] dark:text-[#FF6B6B]">
-                      Shuttle does not serve this pair
-                    </span>
+                    <span className="text-[#E11900] dark:text-[#FF6B6B]">Does not serve this pair</span>
                   )}
                 </div>
               </div>
             </div>
             <div className="text-right">
-              <span className="font-bold text-sm text-black dark:text-white">Free</span>
-              <span className="block text-[11px] text-[#5E5E5E] dark:text-[#A6A6A6]">
-                {hasStudentPass ? 'Student Pass' : 'Campus Transit'}
-              </span>
+              <span className="font-bold text-sm text-black dark:text-white">₹0</span>
+              <span className="block text-[10px] text-[#5E5E5E] dark:text-[#A6A6A6]">Free</span>
             </div>
           </div>
         </div>
 
-        {/* 2. Golf Cart Option (Gated Priority vs Campus Golf Cart) */}
+        {/* 2. Electric Golf Cart (Metered Point-to-Point) */}
         <div
-          onClick={() => hasFreeCarts && setSelectedRide('cart')}
+          onClick={() => setSelectedRide('cart')}
           className={`p-3.5 rounded-[12px] border transition-all ${
-            !hasFreeCarts
-              ? 'opacity-40 border-[#E2E2E2] dark:border-[#333333] cursor-not-allowed'
-              : selectedRide === 'cart'
+            selectedRide === 'cart'
               ? 'border-black dark:border-white bg-[#F3F3F3] dark:bg-[#2A2A2A] shadow-sm'
               : 'border-[#E2E2E2] dark:border-[#333333] hover:bg-[#F3F3F3] dark:hover:bg-[#2A2A2A] cursor-pointer'
           }`}
@@ -894,38 +751,44 @@ export default function UberBookingView({ onBack }: UberBookingViewProps) {
                     {isPriorityRider ? 'Priority Golf Cart' : 'Campus Golf Cart'}
                   </span>
                   {isPriorityRider && (
-                    <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-black dark:bg-white text-white dark:text-black">
-                      Priority Approved
+                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-black dark:bg-white text-white dark:text-black">
+                      Priority Pass
+                    </span>
+                  )}
+                  {cartQuote?.is_peak && (
+                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-600 dark:text-amber-400">
+                      Rush Hour +25%
                     </span>
                   )}
                 </div>
-                <div className="text-xs text-[#5E5E5E] dark:text-[#A6A6A6]">
-                  {hasFreeCarts ? (
-                    `${cartEta} away · ${cartTrip} trip · 4 seats`
-                  ) : (
-                    <span className="text-[#E11900] dark:text-[#FF6B6B]">
-                      No carts currently available
-                    </span>
-                  )}
+                <div className="text-xs text-[#5E5E5E] dark:text-[#A6A6A6] mt-0.5">
+                  Point-to-point express · Up to 6 seats
                 </div>
               </div>
             </div>
             <div className="text-right">
               <span className="font-bold text-sm text-black dark:text-white">
-                {isPriorityRider ? 'Free' : '₹10'}
+                {cartQuote ? `₹${cartQuote.final_fare_inr}` : isPriorityRider ? '₹0' : '₹10-15'}
               </span>
-              <span className="block text-[11px] text-[#5E5E5E] dark:text-[#A6A6A6]">
-                {isPriorityRider
-                  ? 'Medical Flag'
-                  : hasStudentPass
-                  ? 'Student Pass'
-                  : 'Standard Fare'}
+              <span className="block text-[10px] text-[#5E5E5E] dark:text-[#A6A6A6]">
+                {isPriorityRider ? '100% Subsidized' : 'Server quote'}
               </span>
             </div>
           </div>
+
+          {/* Fare breakdown pill if selected */}
+          {selectedRide === 'cart' && cartQuote?.breakdown && (
+            <div className="mt-2.5 pt-2.5 border-t border-[#E2E2E2] dark:border-[#333333] text-[11px] text-[#5E5E5E] dark:text-[#A6A6A6] space-y-1">
+              {cartQuote.breakdown.map((item: string, idx: number) => (
+                <div key={idx} className="flex items-center justify-between">
+                  <span>{item}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
-        {/* 3. E-Rickshaw Option */}
+        {/* 3. Authorized E-Rickshaw */}
         <div
           onClick={() => setSelectedRide('rickshaw')}
           className={`p-3.5 rounded-[12px] border transition-all ${
@@ -941,20 +804,94 @@ export default function UberBookingView({ onBack }: UberBookingViewProps) {
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="font-bold text-sm text-black dark:text-white">
-                    Campus E-Rickshaw
+                  <span className="font-bold text-sm text-black dark:text-white">Smart E-Rickshaw</span>
+                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-500">
+                    Stand Tariff
                   </span>
                 </div>
-                <div className="text-xs text-[#5E5E5E] dark:text-[#A6A6A6]">
-                  {`${rickshawEta} away · ${rickshawTrip} trip · 3 seats`}
+                <div className="text-xs text-[#5E5E5E] dark:text-[#A6A6A6] mt-0.5">
+                  Authorized campus operator stand-to-stand
                 </div>
               </div>
             </div>
             <div className="text-right">
-              <span className="font-bold text-sm text-black dark:text-white">₹15</span>
-              <span className="block text-[11px] text-[#5E5E5E] dark:text-[#A6A6A6]">
-                Flat Tariff
+              <span className="font-bold text-sm text-black dark:text-white">
+                {rickshawQuote ? `₹${rickshawQuote.final_fare_inr}` : '₹15'}
               </span>
+              <span className="block text-[10px] text-[#5E5E5E] dark:text-[#A6A6A6]">Fixed flat</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Schedule & Payment Config Controls */}
+        <div className="pt-2 border-t border-[#E2E2E2] dark:border-[#333333] space-y-3">
+          {/* Now vs Schedule Picker */}
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-black dark:text-white">Departure</span>
+            <div className="flex items-center gap-1 p-0.5 bg-[#F3F3F3] dark:bg-[#2A2A2A] rounded-full text-xs font-semibold">
+              <button
+                onClick={() => setScheduleType('now')}
+                className={`px-3 py-1 rounded-full transition-colors ${
+                  scheduleType === 'now'
+                    ? 'bg-black text-white dark:bg-white dark:text-black shadow-sm'
+                    : 'text-[#5E5E5E] dark:text-[#A6A6A6]'
+                }`}
+              >
+                Now
+              </button>
+              <button
+                onClick={() => setScheduleType('schedule')}
+                className={`px-3 py-1 rounded-full transition-colors ${
+                  scheduleType === 'schedule'
+                    ? 'bg-black text-white dark:bg-white dark:text-black shadow-sm'
+                    : 'text-[#5E5E5E] dark:text-[#A6A6A6]'
+                }`}
+              >
+                Schedule
+              </button>
+            </div>
+          </div>
+
+          {scheduleType === 'schedule' && (
+            <input
+              type="datetime-local"
+              value={scheduledTime}
+              onChange={(e) => setScheduledTime(e.target.value)}
+              className="w-full text-xs p-2 rounded-lg bg-[#F3F3F3] dark:bg-[#2A2A2A] border border-[#E2E2E2] dark:border-[#333333] text-black dark:text-white outline-none"
+            />
+          )}
+
+          {/* Payment Method Selector */}
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between text-xs">
+              <span className="font-bold text-black dark:text-white">Payment Method</span>
+              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-600 dark:text-amber-400">
+                TEST PAYMENTS
+              </span>
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                { id: 'CASH', label: 'Cash', icon: Banknote },
+                { id: 'WALLET', label: 'Wallet', icon: Wallet },
+                { id: 'RAZORPAY', label: 'UPI/Card', icon: CreditCard },
+              ].map((m) => {
+                const Icon = m.icon;
+                const isSel = paymentMethod === m.id;
+                return (
+                  <button
+                    key={m.id}
+                    onClick={() => setPaymentMethod(m.id as any)}
+                    className={`py-2 px-2.5 rounded-xl border flex flex-col items-center gap-1 text-center transition-all ${
+                      isSel
+                        ? 'border-black dark:border-white bg-[#F3F3F3] dark:bg-[#2A2A2A] font-bold'
+                        : 'border-[#E2E2E2] dark:border-[#333333] text-[#5E5E5E] dark:text-[#A6A6A6]'
+                    }`}
+                  >
+                    <Icon className="w-4 h-4" />
+                    <span className="text-[11px]">{m.label}</span>
+                  </button>
+                );
+              })}
             </div>
           </div>
         </div>
@@ -999,12 +936,11 @@ export default function UberBookingView({ onBack }: UberBookingViewProps) {
         <div className="flex-1 overflow-y-auto p-5 space-y-4">
           {/* Pickup and Destination Inputs */}
           <div className="space-y-2.5 bg-[#F3F3F3] dark:bg-[#2A2A2A] p-3.5 rounded-[12px]">
-            {/* Pickup Location */}
             <div className="flex items-center gap-3">
               <div className="w-3 h-3 rounded-full bg-black dark:bg-white shrink-0" />
               <div className="flex-1 min-w-0">
                 <span className="block text-[10px] font-bold uppercase tracking-wider text-[#5E5E5E] dark:text-[#A6A6A6]">
-                  Pickup &middot; Drag pin on map
+                  Pickup Point
                 </span>
                 <span className="font-semibold text-sm text-black dark:text-white truncate block">
                   {pickupStop.name}
@@ -1015,7 +951,6 @@ export default function UberBookingView({ onBack }: UberBookingViewProps) {
 
             <div className="border-t border-[#E2E2E2] dark:border-[#333333] my-1" />
 
-            {/* Destination Input */}
             <div className="flex items-center gap-3">
               <div className="w-3 h-3 bg-black dark:bg-white shrink-0" />
               <div className="flex-1 min-w-0">
@@ -1040,7 +975,14 @@ export default function UberBookingView({ onBack }: UberBookingViewProps) {
             </div>
           </div>
 
-          {/* If step === 'search' or user is searching: Show Destinations */}
+          {bookingError && (
+            <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-600 dark:text-red-400 text-xs flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0" />
+              <span>{bookingError}</span>
+            </div>
+          )}
+
+          {/* If step === 'search': List stops */}
           {step === 'search' && (
             <div className="space-y-1.5 pt-2">
               <div className="text-[11px] font-bold text-[#5E5E5E] dark:text-[#A6A6A6] uppercase tracking-wider px-1">
@@ -1073,10 +1015,9 @@ export default function UberBookingView({ onBack }: UberBookingViewProps) {
             </div>
           )}
 
-          {/* If step === 'options': Show Route Summary & Ride Pickers */}
+          {/* If step === 'options': Show Route Summary & Real Fare Pickers */}
           {step === 'options' && (
             <div className="space-y-4 pt-1">
-              {/* Route distance and duration header */}
               <div className="flex items-center justify-between pb-2 border-b border-[#E2E2E2] dark:border-[#333333]">
                 <div>
                   <h2 className="font-bold text-base text-black dark:text-white">Choose a ride</h2>
@@ -1088,13 +1029,6 @@ export default function UberBookingView({ onBack }: UberBookingViewProps) {
                         {routeInfo.formattedDistance}, {routeInfo.formattedDuration}
                       </span>
                     ) : null}
-
-                    {routeInfo?.isApproximate && (
-                      <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center gap-1">
-                        <Info className="w-3 h-3" />
-                        Approximate route
-                      </span>
-                    )}
                   </div>
                 </div>
 
@@ -1106,66 +1040,100 @@ export default function UberBookingView({ onBack }: UberBookingViewProps) {
                 </button>
               </div>
 
-              {/* Ride rows */}
               {renderRideOptionsList()}
             </div>
           )}
 
-          {/* If step === 'finding': Animated Radar */}
+          {/* If step === 'finding': Animated Radar Matching HUD */}
           {step === 'finding' && (
-            <div className="py-12 text-center space-y-4">
-              <div className="w-16 h-16 rounded-full bg-black dark:bg-white text-white dark:text-black mx-auto flex items-center justify-center animate-pulse shadow-xl">
-                {selectedRide === 'shuttle' ? (
-                  <Bus className="w-8 h-8" />
-                ) : selectedRide === 'cart' ? (
-                  <Zap className="w-8 h-8" />
-                ) : (
-                  <Car className="w-8 h-8" />
-                )}
+            <div className="py-10 text-center space-y-4">
+              <div className="relative w-20 h-20 mx-auto flex items-center justify-center">
+                <div className="absolute inset-0 rounded-full border-2 border-black dark:border-white animate-ping opacity-25" />
+                <div className="w-16 h-16 rounded-full bg-black dark:bg-white text-white dark:text-black flex items-center justify-center shadow-xl">
+                  {selectedRide === 'shuttle' ? (
+                    <Bus className="w-8 h-8" />
+                  ) : selectedRide === 'cart' ? (
+                    <Zap className="w-8 h-8" />
+                  ) : (
+                    <Car className="w-8 h-8" />
+                  )}
+                </div>
               </div>
-              <h3 className="font-bold text-lg text-black dark:text-white">
-                Finding your campus ride
-              </h3>
-              <p className="text-xs text-[#5E5E5E] dark:text-[#A6A6A6] max-w-xs mx-auto">
-                Connecting with nearest active {selectedRide} near {pickupStop.name}...
-              </p>
+              <div>
+                <h3 className="font-bold text-lg text-black dark:text-white">
+                  Finding your campus ride
+                </h3>
+                <p className="text-xs text-[#5E5E5E] dark:text-[#A6A6A6] mt-1 max-w-xs mx-auto">
+                  {activeBooking?.queue_position > 0
+                    ? `In priority queue (Position #${activeBooking.queue_position}) · Est wait: ${activeBooking.estimated_wait_mins} min`
+                    : `Contacting nearest active ${selectedRide} near ${pickupStop.name}...`}
+                </p>
+              </div>
+              <button
+                onClick={handleCancelBooking}
+                className="text-xs font-bold text-[#E11900] py-2 hover:underline"
+              >
+                Cancel request
+              </button>
             </div>
           )}
 
-          {/* If step === 'assigned': Vehicle Card */}
-          {step === 'assigned' && (
+          {/* If step === 'assigned': Live Vehicle & Driver Card */}
+          {step === 'assigned' && activeBooking && (
             <div className="space-y-4 pt-1">
               <div className="p-4 rounded-[12px] bg-[#F3F3F3] dark:bg-[#2A2A2A] space-y-3">
                 <div className="flex items-center justify-between">
                   <div>
                     <h3 className="font-extrabold text-lg text-black dark:text-white">
-                      {driverEtaMins > 0 ? `Arriving in ${driverEtaMins} mins` : 'Vehicle has arrived!'}
+                      {activeBooking.status === 'ARRIVING'
+                        ? 'Vehicle Arrived at Pickup!'
+                        : activeBooking.status === 'PICKED_UP'
+                        ? 'Trip in Progress'
+                        : 'Driver on the way'}
                     </h3>
-                    <p className="text-xs text-[#05A357] font-semibold flex items-center gap-1">
+                    <p className="text-xs text-[#05A357] font-semibold flex items-center gap-1 mt-0.5">
                       <CheckCircle2 className="w-3.5 h-3.5" />
-                      <span>En route to {pickupStop.name}</span>
+                      <span>
+                        {activeBooking.status === 'PICKED_UP'
+                          ? `Heading to ${activeBooking.drop_stop?.name || dropoffStop?.name}`
+                          : `En route to ${activeBooking.pickup_stop?.name || pickupStop.name}`}
+                      </span>
                     </p>
                   </div>
-                  <div className="w-11 h-11 rounded-full bg-black dark:bg-white text-white dark:text-black flex items-center justify-center font-bold">
-                    {assignedVehicle.driverName[0]}
+                  <div className="w-11 h-11 rounded-full bg-black dark:bg-white text-white dark:text-black flex items-center justify-center font-bold text-sm">
+                    {activeBooking.assigned_driver?.name ? activeBooking.assigned_driver.name[0] : 'G'}
                   </div>
                 </div>
+
+                {/* 5-Min No-Show Countdown Warning when ARRIVING */}
+                {activeBooking.status === 'ARRIVING' && noShowSecondsLeft !== null && (
+                  <div className="p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 text-xs flex items-center justify-between">
+                    <span className="flex items-center gap-1.5 font-bold">
+                      <AlertTriangle className="w-3.5 h-3.5" />
+                      Boarding Window:
+                    </span>
+                    <span className="font-mono font-bold">
+                      {Math.floor(noShowSecondsLeft / 60)}:
+                      {String(noShowSecondsLeft % 60).padStart(2, '0')} min
+                    </span>
+                  </div>
+                )}
 
                 <div className="border-t border-[#E2E2E2] dark:border-[#333333] pt-3 flex items-center justify-between">
                   <div>
                     <div className="font-bold text-sm text-black dark:text-white">
-                      {assignedVehicle.driverName}
+                      {activeBooking.assigned_driver?.name || 'Gurpreet Singh'}
                     </div>
                     <div className="text-xs text-[#5E5E5E] dark:text-[#A6A6A6]">
-                      {assignedVehicle.rating} ★ &middot; {assignedVehicle.trips}
+                      4.95 ★ &middot; {activeBooking.assigned_driver?.license_number || 'PB-08-2021-00452'}
                     </div>
                   </div>
                   <div className="text-right">
                     <div className="font-mono font-black text-sm text-black dark:text-white">
-                      {assignedVehicle.plate}
+                      {activeBooking.assigned_cart?.cart_code || 'GC-01'}
                     </div>
                     <div className="text-[11px] text-[#5E5E5E] dark:text-[#A6A6A6] capitalize">
-                      Campus {assignedVehicle.type}
+                      {activeBooking.vehicle_type} · {activeBooking.passenger_count} Seat(s)
                     </div>
                   </div>
                 </div>
@@ -1174,31 +1142,124 @@ export default function UberBookingView({ onBack }: UberBookingViewProps) {
               {/* Action Buttons: Call, Share, Cancel */}
               <div className="grid grid-cols-3 gap-2">
                 <a
-                  href={`tel:${assignedVehicle.phone}`}
+                  href={`tel:${activeBooking.assigned_driver?.phone_number || '+91-98765-22002'}`}
                   className="uber-btn-secondary h-11 min-h-[44px] text-xs font-bold"
                 >
                   <Phone className="w-4 h-4 mr-1 text-[#05A357]" />
                   <span>Call</span>
                 </a>
                 <button
-                  onClick={() => alert('Live trip tracking link copied to clipboard!')}
+                  onClick={() => {
+                    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+                      navigator.clipboard.writeText(
+                        `${window.location.origin}/book?trip_id=${activeBooking.id}`
+                      );
+                      alert('Trip tracking link copied to clipboard!');
+                    }
+                  }}
                   className="uber-btn-secondary h-11 min-h-[44px] text-xs font-bold"
                 >
                   <Share2 className="w-4 h-4 mr-1 text-[#276EF1]" />
                   <span>Share</span>
                 </button>
                 <button
-                  onClick={() => {
-                    if (confirm('Cancel this campus ride request?')) {
-                      setStep('search');
-                    }
-                  }}
+                  onClick={() => setCancelModalOpen(true)}
                   className="uber-btn-secondary h-11 min-h-[44px] text-xs font-bold text-[#E11900] hover:bg-red-50 dark:hover:bg-red-950/30"
                 >
                   <X className="w-4 h-4 mr-1" />
                   <span>Cancel</span>
                 </button>
               </div>
+            </div>
+          )}
+
+          {/* If step === 'completed': Rating & Receipt View */}
+          {step === 'completed' && activeBooking && (
+            <div className="p-4 rounded-[12px] bg-[#F3F3F3] dark:bg-[#2A2A2A] space-y-4 text-center">
+              <div className="w-12 h-12 rounded-full bg-[#05A357]/15 text-[#05A357] flex items-center justify-center mx-auto">
+                <CheckCircle2 className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="font-extrabold text-lg text-black dark:text-white">Trip Completed</h3>
+                <p className="text-xs text-[#5E5E5E] dark:text-[#A6A6A6]">
+                  Arrived safely at {activeBooking.drop_stop?.name || dropoffStop?.name}
+                </p>
+              </div>
+
+              {/* Receipt Summary */}
+              <div className="p-3 rounded-lg bg-white dark:bg-[#1C1C1C] border border-[#E2E2E2] dark:border-[#333333] text-left text-xs space-y-1.5">
+                <div className="flex justify-between font-bold">
+                  <span>Fare Paid</span>
+                  <span>₹{activeBooking.fare_amount_inr || activeBooking.fare_amount_paise / 100}</span>
+                </div>
+                <div className="flex justify-between text-[#5E5E5E] dark:text-[#A6A6A6] text-[11px]">
+                  <span>Method</span>
+                  <span>{activeBooking.payment_method}</span>
+                </div>
+              </div>
+
+              {/* 5-Star Rating */}
+              {!ratingSubmitted ? (
+                <div className="space-y-3 pt-2">
+                  <span className="text-xs font-bold">Rate your driver</span>
+                  <div className="flex justify-center gap-1.5">
+                    {[1, 2, 3, 4, 5].map((s) => (
+                      <button
+                        key={s}
+                        onClick={() => setRatingVal(s)}
+                        className={`p-1.5 transition-transform active:scale-125 ${
+                          s <= ratingVal ? 'text-amber-400' : 'text-slate-300 dark:text-slate-700'
+                        }`}
+                      >
+                        <Star className="w-6 h-6 fill-current" />
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Quick feedback tags */}
+                  <div className="flex flex-wrap gap-1.5 justify-center pt-1">
+                    {['On time', 'Smooth ride', 'Polite driver', 'Clean cart'].map((tag) => {
+                      const isSel = selectedTags.includes(tag);
+                      return (
+                        <button
+                          key={tag}
+                          onClick={() =>
+                            setSelectedTags((prev) =>
+                              prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
+                            )
+                          }
+                          className={`text-[10px] font-semibold px-2 py-1 rounded-full border transition-colors ${
+                            isSel
+                              ? 'bg-black text-white dark:bg-white dark:text-black border-transparent'
+                              : 'bg-transparent border-[#E2E2E2] dark:border-[#333333] text-[#5E5E5E]'
+                          }`}
+                        >
+                          {tag}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <button onClick={handleRateBooking} className="uber-btn-primary w-full text-xs">
+                    Submit Rating
+                  </button>
+                </div>
+              ) : (
+                <div className="p-3 rounded-lg bg-[#05A357]/10 text-[#05A357] text-xs font-bold">
+                  Thank you for your rating!
+                </div>
+              )}
+
+              <button
+                onClick={() => {
+                  setActiveBooking(null);
+                  setStep('options');
+                  setRatingSubmitted(false);
+                }}
+                className="uber-btn-secondary w-full text-xs font-bold"
+              >
+                Book Another Ride
+              </button>
             </div>
           )}
         </div>
@@ -1208,12 +1269,16 @@ export default function UberBookingView({ onBack }: UberBookingViewProps) {
           <div className="p-4 border-t border-[#E2E2E2] dark:border-[#333333] bg-white dark:bg-[#1C1C1C] sticky bottom-0">
             <button
               onClick={handleConfirmRide}
-              disabled={selectedRide === 'shuttle' && !isShuttleAvailable}
-              className="uber-btn-primary w-full disabled:opacity-50"
+              disabled={bookingLoading}
+              className="uber-btn-primary w-full disabled:opacity-50 flex items-center justify-center gap-2"
             >
-              <span>
-                Confirm {selectedRide === 'shuttle' ? 'Shuttle' : selectedRide === 'cart' ? 'Golf Cart' : 'E-Rickshaw'}
-              </span>
+              {bookingLoading ? (
+                <span>Requesting Dispatch...</span>
+              ) : (
+                <span>
+                  Confirm {selectedRide === 'shuttle' ? 'Shuttle' : selectedRide === 'cart' ? 'Golf Cart' : 'E-Rickshaw'}
+                </span>
+              )}
             </button>
           </div>
         )}
@@ -1223,10 +1288,9 @@ export default function UberBookingView({ onBack }: UberBookingViewProps) {
       {/* MAP CONTAINER (Fills rest of screen on desktop, full on mobile) */}
       {/* ============================================================== */}
       <main className="relative flex-1 h-full w-full bg-[#F3F3F3] dark:bg-[#141414]">
-        {/* Real MapLibre Canvas */}
         <div ref={mapContainerRef} className="absolute inset-0 w-full h-full z-0" />
 
-        {/* Mobile Floating Top Bar (Back button, Theme Toggle) */}
+        {/* Mobile Floating Top Bar */}
         <div className="lg:hidden absolute top-4 left-4 right-4 z-20 flex items-center justify-between pointer-events-none">
           <button
             onClick={step === 'search' ? onBack : () => setStep('search')}
@@ -1245,184 +1309,56 @@ export default function UberBookingView({ onBack }: UberBookingViewProps) {
           </button>
         </div>
 
-        {/* Approximate Route Banner if Routing Failed */}
-        {routeInfo?.isApproximate && (
-          <div className="absolute top-18 lg:top-4 left-4 right-4 lg:left-6 lg:right-auto z-20 max-w-sm flex items-center gap-2 px-3.5 py-2 rounded-full bg-white/95 dark:bg-[#1C1C1C]/95 text-black dark:text-white border border-[#E2E2E2] dark:border-[#333333] shadow-lg text-xs font-semibold backdrop-blur-sm">
-            <Info className="w-4 h-4 text-amber-500 shrink-0" />
-            <span>Approximate route (campus roads snapping active)</span>
-          </div>
-        )}
-
-        {/* Map Error Banner */}
-        {mapError && (
-          <div className="absolute top-20 left-4 right-4 max-w-md mx-auto z-30 flex items-center gap-2.5 px-4 py-2.5 bg-white dark:bg-[#1C1C1C] text-black dark:text-white rounded-full shadow-lg border border-[#E2E2E2] dark:border-[#333333] text-xs font-semibold">
-            <AlertCircle className="w-4 h-4 text-[#E11900] shrink-0" />
-            <span>Basemap offline &middot; Operating with local campus route graph</span>
-          </div>
-        )}
-
-        {/* ============================================================== */}
-        {/* MOBILE BOTTOM SHEET (Screens < 900px) */}
-        {/* ============================================================== */}
+        {/* Mobile Bottom Sheets */}
         <div className="lg:hidden">
-          {/* Step 1 Search Floating Card on Mobile */}
-          <AnimatePresence>
-            {step === 'search' && (
-              <motion.div
-                initial={{ opacity: 0, y: 30 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 30 }}
-                className="absolute bottom-0 left-0 right-0 z-30 bg-white dark:bg-[#1C1C1C] rounded-t-[16px] p-5 shadow-2xl border-t border-[#E2E2E2] dark:border-[#333333] max-h-[82vh] overflow-y-auto"
-              >
-                <div className="w-12 h-1.5 rounded-full bg-[#E2E2E2] dark:bg-[#333333] mx-auto mb-3" />
-
-                <div className="space-y-3">
-                  <div className="flex items-center gap-3 px-3.5 py-2.5 rounded-[8px] bg-[#F3F3F3] dark:bg-[#2A2A2A]">
-                    <div className="w-2.5 h-2.5 rounded-full bg-black dark:bg-white" />
-                    <div className="flex-1">
-                      <span className="block text-[10px] font-bold uppercase tracking-wider text-[#5E5E5E] dark:text-[#A6A6A6]">
-                        Pickup Location
-                      </span>
-                      <span className="font-semibold text-sm text-black dark:text-white truncate block">
-                        {pickupStop.name}
-                      </span>
-                    </div>
-                    <Navigation className="w-4 h-4 text-[#276EF1]" />
-                  </div>
-
-                  <div className="flex items-center gap-3 px-3.5 py-2.5 rounded-[8px] bg-[#F3F3F3] dark:bg-[#2A2A2A] border-2 border-transparent focus-within:border-black dark:focus-within:border-white">
-                    <div className="w-2.5 h-2.5 bg-black dark:bg-white" />
-                    <input
-                      type="text"
-                      placeholder="Where to on campus?"
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="w-full bg-transparent text-sm font-semibold text-black dark:text-white placeholder-[#5E5E5E] dark:placeholder-[#A6A6A6] outline-none"
-                    />
-                    {searchQuery ? (
-                      <button onClick={() => setSearchQuery('')}>
-                        <X className="w-4 h-4 text-[#5E5E5E]" />
-                      </button>
-                    ) : (
-                      <Search className="w-4 h-4 text-[#5E5E5E]" />
-                    )}
-                  </div>
-
-                  <div className="pt-2 divide-y divide-[#E2E2E2] dark:divide-[#333333] max-h-60 overflow-y-auto">
-                    <div className="text-[11px] font-bold text-[#5E5E5E] dark:text-[#A6A6A6] uppercase tracking-wider pb-1.5 px-1">
-                      Campus Destinations
-                    </div>
-                    {filteredStops.map((stop) => (
-                      <button
-                        key={stop.id}
-                        onClick={() => handleSelectDropoff(stop)}
-                        className="w-full py-2.5 px-1 flex items-center justify-between text-left hover:bg-[#F3F3F3] dark:hover:bg-[#2A2A2A] rounded-[8px] transition-colors"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-[#F3F3F3] dark:bg-[#2A2A2A] flex items-center justify-center text-[#5E5E5E] dark:text-[#A6A6A6]">
-                            <MapPin className="w-4 h-4" />
-                          </div>
-                          <div>
-                            <div className="font-semibold text-sm text-black dark:text-white">
-                              {stop.name}
-                            </div>
-                            <div className="text-xs text-[#5E5E5E] dark:text-[#A6A6A6]">
-                              {stop.area}
-                            </div>
-                          </div>
-                        </div>
-                        <ChevronRight className="w-4 h-4 text-[#5E5E5E]" />
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* Step 2 Options Bottom Sheet with Snap Points on Mobile */}
+          {/* Options Bottom Sheet on Mobile */}
           <AnimatePresence>
             {step === 'options' && (
               <motion.div
                 initial={{ y: '100%' }}
                 animate={{ y: 0 }}
                 exit={{ y: '100%' }}
-                transition={{ type: 'spring', damping: 26, stiffness: 220 }}
                 className={`absolute bottom-0 left-0 right-0 z-30 bg-white dark:bg-[#1C1C1C] rounded-t-[16px] shadow-2xl border-t border-[#E2E2E2] dark:border-[#333333] flex flex-col ${
-                  sheetSnap === 'full'
-                    ? 'h-[85vh]'
-                    : sheetSnap === 'half'
-                    ? 'h-[430px]'
-                    : 'h-[160px]'
+                  sheetSnap === 'full' ? 'h-[85vh]' : 'h-[460px]'
                 } transition-all duration-300`}
               >
-                {/* Drag Handle & Snap Toggles */}
                 <div
-                  onClick={() =>
-                    setSheetSnap(sheetSnap === 'half' ? 'full' : sheetSnap === 'full' ? 'half' : 'half')
-                  }
+                  onClick={() => setSheetSnap(sheetSnap === 'half' ? 'full' : 'half')}
                   className="pt-3 pb-2 cursor-pointer flex flex-col items-center"
                 >
                   <div className="w-12 h-1.5 rounded-full bg-[#E2E2E2] dark:bg-[#333333]" />
                 </div>
 
-                {/* Sheet Header: Distance, Duration & Destination */}
                 <div className="px-5 pb-3 border-b border-[#E2E2E2] dark:border-[#333333] flex items-start justify-between">
                   <div>
                     <h2 className="font-bold text-lg text-black dark:text-white">Choose a ride</h2>
-                    <div className="flex items-center gap-2 text-xs text-[#5E5E5E] dark:text-[#A6A6A6] mt-0.5">
-                      <span>To {dropoffStop?.name}</span>
-                      <span>&middot;</span>
-                      {routeInfo && (
-                        <span className="font-bold text-black dark:text-white">
-                          {routeInfo.formattedDistance}, {routeInfo.formattedDuration}
-                        </span>
-                      )}
+                    <div className="text-xs text-[#5E5E5E] dark:text-[#A6A6A6]">
+                      To {dropoffStop?.name} &middot; {routeInfo?.formattedDistance}
                     </div>
                   </div>
-
-                  <div className="flex items-center gap-1">
-                    <button
-                      onClick={() =>
-                        setSheetSnap(sheetSnap === 'half' ? 'full' : 'half')
-                      }
-                      className="p-1 rounded-full text-[#5E5E5E]"
-                      aria-label="Expand sheet"
-                    >
-                      {sheetSnap === 'full' ? <ChevronDown className="w-5 h-5" /> : <ChevronUp className="w-5 h-5" />}
-                    </button>
-                    <button
-                      onClick={() => setStep('search')}
-                      className="p-1 rounded-full text-[#5E5E5E]"
-                      aria-label="Close options"
-                    >
-                      <X className="w-5 h-5" />
-                    </button>
-                  </div>
+                  <button onClick={() => setStep('search')} className="p-1 rounded-full text-[#5E5E5E]">
+                    <X className="w-5 h-5" />
+                  </button>
                 </div>
 
-                {/* Scrollable List of Ride Options */}
                 <div className="flex-1 overflow-y-auto px-5 py-3">
                   {renderRideOptionsList()}
                 </div>
 
-                {/* Sticky Confirm Button */}
-                <div className="p-4 border-t border-[#E2E2E2] dark:border-[#333333] bg-white dark:bg-[#1C1C1C] sticky bottom-0">
+                <div className="p-4 border-t border-[#E2E2E2] dark:border-[#333333] bg-white dark:bg-[#1C1C1C]">
                   <button
                     onClick={handleConfirmRide}
-                    disabled={selectedRide === 'shuttle' && !isShuttleAvailable}
+                    disabled={bookingLoading}
                     className="uber-btn-primary w-full disabled:opacity-50"
                   >
-                    <span>
-                      Confirm {selectedRide === 'shuttle' ? 'Shuttle' : selectedRide === 'cart' ? 'Golf Cart' : 'E-Rickshaw'}
-                    </span>
+                    <span>Confirm Ride</span>
                   </button>
                 </div>
               </motion.div>
             )}
           </AnimatePresence>
 
-          {/* Step 3 Finding Sheet on Mobile */}
+          {/* Finding Sheet on Mobile */}
           <AnimatePresence>
             {step === 'finding' && (
               <motion.div
@@ -1432,34 +1368,20 @@ export default function UberBookingView({ onBack }: UberBookingViewProps) {
                 className="absolute bottom-0 left-0 right-0 z-30 bg-white dark:bg-[#1C1C1C] rounded-t-[16px] p-6 shadow-2xl border-t border-[#E2E2E2] dark:border-[#333333] text-center space-y-4"
               >
                 <div className="w-12 h-1.5 rounded-full bg-[#E2E2E2] dark:bg-[#333333] mx-auto" />
-                <div className="w-16 h-16 rounded-full bg-black dark:bg-white text-white dark:text-black mx-auto flex items-center justify-center animate-pulse shadow-xl">
-                  {selectedRide === 'shuttle' ? (
-                    <Bus className="w-8 h-8" />
-                  ) : selectedRide === 'cart' ? (
-                    <Zap className="w-8 h-8" />
-                  ) : (
-                    <Car className="w-8 h-8" />
-                  )}
+                <div className="w-16 h-16 rounded-full bg-black dark:bg-white text-white dark:text-black mx-auto flex items-center justify-center animate-pulse">
+                  <Zap className="w-8 h-8" />
                 </div>
-                <h2 className="font-bold text-xl text-black dark:text-white">
-                  Finding your campus ride
-                </h2>
-                <p className="text-xs text-[#5E5E5E] dark:text-[#A6A6A6]">
-                  Matching with nearest active {selectedRide} near {pickupStop.name}...
-                </p>
-                <button
-                  onClick={() => setStep('options')}
-                  className="text-xs font-semibold text-[#E11900] py-1"
-                >
+                <h2 className="font-bold text-xl text-black dark:text-white">Finding your ride</h2>
+                <button onClick={handleCancelBooking} className="text-xs font-semibold text-[#E11900] py-1">
                   Cancel request
                 </button>
               </motion.div>
             )}
           </AnimatePresence>
 
-          {/* Step 4 Driver Assigned Sheet on Mobile */}
+          {/* Driver Assigned Sheet on Mobile */}
           <AnimatePresence>
-            {step === 'assigned' && (
+            {step === 'assigned' && activeBooking && (
               <motion.div
                 initial={{ y: '100%' }}
                 animate={{ y: 0 }}
@@ -1467,63 +1389,65 @@ export default function UberBookingView({ onBack }: UberBookingViewProps) {
                 className="absolute bottom-0 left-0 right-0 z-30 bg-white dark:bg-[#1C1C1C] rounded-t-[16px] p-5 shadow-2xl border-t border-[#E2E2E2] dark:border-[#333333] space-y-4"
               >
                 <div className="w-12 h-1.5 rounded-full bg-[#E2E2E2] dark:bg-[#333333] mx-auto mb-1" />
-
-                <div className="flex items-center justify-between border-b border-[#E2E2E2] dark:border-[#333333] pb-3">
+                <div className="flex items-center justify-between">
                   <div>
                     <h2 className="font-extrabold text-xl text-black dark:text-white">
-                      {driverEtaMins > 0 ? `Arriving in ${driverEtaMins} mins` : 'Vehicle has arrived!'}
+                      {activeBooking.status === 'ARRIVING'
+                        ? 'Vehicle Arrived!'
+                        : activeBooking.status === 'PICKED_UP'
+                        ? 'On Trip'
+                        : 'Driver Assigned'}
                     </h2>
-                    <p className="text-xs text-[#05A357] font-semibold flex items-center gap-1.5">
-                      <CheckCircle2 className="w-3.5 h-3.5" />
-                      <span>Ride confirmed &middot; En route to {pickupStop.name}</span>
+                    <p className="text-xs text-[#05A357] font-semibold">
+                      En route &middot; {activeBooking.pickup_stop?.name || pickupStop.name}
                     </p>
                   </div>
                   <div className="w-11 h-11 rounded-full bg-black dark:bg-white text-white dark:text-black flex items-center justify-center font-bold">
-                    {assignedVehicle.driverName[0]}
+                    {activeBooking.assigned_driver?.name ? activeBooking.assigned_driver.name[0] : 'G'}
                   </div>
                 </div>
 
                 <div className="flex items-center justify-between p-3.5 rounded-[12px] bg-[#F3F3F3] dark:bg-[#2A2A2A]">
                   <div>
                     <div className="font-bold text-sm text-black dark:text-white">
-                      {assignedVehicle.driverName}
+                      {activeBooking.assigned_driver?.name || 'Gurpreet Singh'}
                     </div>
                     <div className="text-xs text-[#5E5E5E] dark:text-[#A6A6A6]">
-                      {assignedVehicle.rating} ★ &middot; {assignedVehicle.trips}
+                      4.95 ★ &middot; {activeBooking.assigned_driver?.license_number || 'PB-08-2021-00452'}
                     </div>
                   </div>
                   <div className="text-right">
                     <div className="font-mono font-black text-sm text-black dark:text-white">
-                      {assignedVehicle.plate}
-                    </div>
-                    <div className="text-[11px] text-[#5E5E5E] dark:text-[#A6A6A6] capitalize">
-                      Campus {assignedVehicle.type}
+                      {activeBooking.assigned_cart?.cart_code || 'GC-01'}
                     </div>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-3 gap-2">
                   <a
-                    href={`tel:${assignedVehicle.phone}`}
+                    href={`tel:${activeBooking.assigned_driver?.phone_number || '+91-98765-22002'}`}
                     className="uber-btn-secondary h-11 min-h-[44px] text-xs font-bold"
                   >
                     <Phone className="w-4 h-4 mr-1 text-[#05A357]" />
                     <span>Call</span>
                   </a>
                   <button
-                    onClick={() => alert('Live trip link copied to clipboard!')}
+                    onClick={() => {
+                      if (typeof navigator !== 'undefined' && navigator.clipboard) {
+                        navigator.clipboard.writeText(
+                          `${window.location.origin}/book?trip_id=${activeBooking.id}`
+                        );
+                        alert('Trip link copied!');
+                      }
+                    }}
                     className="uber-btn-secondary h-11 min-h-[44px] text-xs font-bold"
                   >
                     <Share2 className="w-4 h-4 mr-1 text-[#276EF1]" />
                     <span>Share</span>
                   </button>
                   <button
-                    onClick={() => {
-                      if (confirm('Cancel this campus ride request?')) {
-                        setStep('search');
-                      }
-                    }}
-                    className="uber-btn-secondary h-11 min-h-[44px] text-xs font-bold text-[#E11900] hover:bg-red-50 dark:hover:bg-red-950/30"
+                    onClick={() => setCancelModalOpen(true)}
+                    className="uber-btn-secondary h-11 min-h-[44px] text-xs font-bold text-[#E11900]"
                   >
                     <X className="w-4 h-4 mr-1" />
                     <span>Cancel</span>
@@ -1534,6 +1458,42 @@ export default function UberBookingView({ onBack }: UberBookingViewProps) {
           </AnimatePresence>
         </div>
       </main>
+
+      {/* Cancellation Modal */}
+      {cancelModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60">
+          <div className="w-full max-w-sm bg-white dark:bg-[#1C1C1C] rounded-2xl p-5 border border-[#E2E2E2] dark:border-[#333333] space-y-4">
+            <h3 className="font-extrabold text-lg text-black dark:text-white">Cancel Ride?</h3>
+            <p className="text-xs text-[#5E5E5E] dark:text-[#A6A6A6]">
+              Please tell us why you are cancelling this booking:
+            </p>
+            <select
+              value={cancelReason}
+              onChange={(e) => setCancelReason(e.target.value)}
+              className="w-full text-xs p-2.5 rounded-lg bg-[#F3F3F3] dark:bg-[#2A2A2A] border border-[#E2E2E2] dark:border-[#333333] text-black dark:text-white outline-none"
+            >
+              <option value="Changed plans">Changed plans</option>
+              <option value="Wait time too long">Wait time too long</option>
+              <option value="Decided to walk">Decided to walk</option>
+              <option value="Found alternative transport">Found alternative transport</option>
+            </select>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setCancelModalOpen(false)}
+                className="uber-btn-secondary flex-1 text-xs"
+              >
+                Keep Ride
+              </button>
+              <button
+                onClick={handleCancelBooking}
+                className="uber-btn-primary flex-1 text-xs bg-[#E11900] text-white hover:bg-red-700"
+              >
+                Confirm Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

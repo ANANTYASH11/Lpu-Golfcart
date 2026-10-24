@@ -25,7 +25,17 @@ class Settings:
     MAX_ACTIVE_BOOKINGS_PER_STUDENT: int = 1
     NO_SHOW_TIMEOUT_SEC: int = 300          # 5 minutes auto-cancel on arrival
     
+    # Razorpay Payment Gateway (Test Mode) & Campus Wallet
+    RAZORPAY_KEY_ID: str = os.getenv("RAZORPAY_KEY_ID", "rzp_test_5173UniCartLPU")
+    RAZORPAY_KEY_SECRET: str = os.getenv("RAZORPAY_KEY_SECRET", "UniCartSecretKey2026Secure")
+    RAZORPAY_WEBHOOK_SECRET: str = os.getenv("RAZORPAY_WEBHOOK_SECRET", "UniCartWebhookSecret2026")
+    PAYMENTS_MODE: str = os.getenv("PAYMENTS_MODE", "test")
+
+    # Campus Safety & Security
+    CAMPUS_HELPLINE_NUMBER: str = os.getenv("CAMPUS_HELPLINE_NUMBER", "+91 1824 517000")
+
     # CORS
     CORS_ORIGINS: list[str] = ["*"]
 
 settings = Settings()
+

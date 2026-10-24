@@ -58,6 +58,12 @@ class BookingRequest(Base):
     is_priority = Column(Boolean, default=False)
     priority_reason = Column(String(100), nullable=True)
     
+    # Vehicle and Fare
+    vehicle_type = Column(String(20), default="GOLF_CART", nullable=False)  # GOLF_CART, SHUTTLE, ERICKSHAW
+    fare_amount_paise = Column(Integer, default=0, nullable=False)
+    payment_method = Column(String(30), default="CASH", nullable=False)  # CASH, WALLET, RAZORPAY_UPI, RAZORPAY_CARD, FREE
+    payment_status = Column(String(20), default="PENDING", nullable=False)  # PENDING, PAID, REFUNDED
+    
     requested_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     scheduled_for = Column(DateTime, nullable=True)
     
@@ -69,7 +75,13 @@ class BookingRequest(Base):
     estimated_wait_mins = Column(Integer, default=0)
     no_show_deadline = Column(DateTime, nullable=True)  # Set when ARRIVING: 5 min limit
 
+    # Rating and Feedback
+    rating = Column(Integer, nullable=True)  # 1 to 5
+    feedback = Column(String(255), nullable=True)
+    cancellation_reason = Column(String(255), nullable=True)
+
     student = relationship("User", back_populates="bookings")
     pickup_stop = relationship("Stop", foreign_keys=[pickup_stop_id])
     drop_stop = relationship("Stop", foreign_keys=[drop_stop_id])
     assigned_cart = relationship("GolfCart", back_populates="bookings")
+

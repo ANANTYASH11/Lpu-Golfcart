@@ -3,6 +3,15 @@ from typing import Optional, List
 from datetime import datetime
 from app.schemas.transport import StopResponse
 
+class DriverInfo(BaseModel):
+    id: int
+    name: str
+    phone_number: str
+    license_number: str
+
+    class Config:
+        from_attributes = True
+
 class ErickshawStandResponse(BaseModel):
     id: int
     name: str
@@ -39,6 +48,7 @@ class GolfCartResponse(BaseModel):
     assigned_driver_id: Optional[int] = None
     last_location_update_at: datetime
     current_stop: Optional[StopResponse] = None
+    driver: Optional[DriverInfo] = None
 
     class Config:
         from_attributes = True
@@ -47,6 +57,8 @@ class BookingCreateRequest(BaseModel):
     pickup_stop_id: int
     drop_stop_id: int
     passenger_count: int = 1
+    vehicle_type: Optional[str] = "GOLF_CART"
+    payment_method: Optional[str] = "CASH"
     scheduled_for: Optional[datetime] = None
     is_priority: Optional[bool] = None
     priority_reason: Optional[str] = None
@@ -55,12 +67,24 @@ class BookingStatusUpdateRequest(BaseModel):
     action: str  # ACCEPT, REJECT, ARRIVING, PICKED_UP, COMPLETE, CANCEL, NO_SHOW
     reason: Optional[str] = None
 
+class BookingRateRequest(BaseModel):
+    rating: int  # 1 to 5
+    feedback: Optional[str] = None
+
+class BookingCancelRequest(BaseModel):
+    reason: Optional[str] = "Cancelled by user"
+
 class BookingResponse(BaseModel):
     id: int
     student_id: int
     pickup_stop_id: int
     drop_stop_id: int
     passenger_count: int
+    vehicle_type: str = "GOLF_CART"
+    fare_amount_paise: int = 0
+    fare_amount_inr: float = 0.0
+    payment_method: str = "CASH"
+    payment_status: str = "PENDING"
     is_priority: bool
     priority_reason: Optional[str] = None
     requested_at: datetime
@@ -70,9 +94,13 @@ class BookingResponse(BaseModel):
     queue_position: int
     estimated_wait_mins: int
     no_show_deadline: Optional[datetime] = None
+    rating: Optional[int] = None
+    feedback: Optional[str] = None
+    cancellation_reason: Optional[str] = None
     pickup_stop: Optional[StopResponse] = None
     drop_stop: Optional[StopResponse] = None
     assigned_cart: Optional[GolfCartResponse] = None
+    assigned_driver: Optional[DriverInfo] = None
 
     class Config:
         from_attributes = True

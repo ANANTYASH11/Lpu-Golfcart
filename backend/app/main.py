@@ -13,7 +13,11 @@ from app.routers import (
     transport_router,
     shuttle_ops_router,
     last_mile_router,
-    stream_router
+    stream_router,
+    fares_router,
+    payments_router,
+    priority_router,
+    safety_router
 )
 
 logging.basicConfig(level=logging.INFO)
@@ -78,6 +82,10 @@ app.include_router(transport_router, prefix=api_v1)
 app.include_router(shuttle_ops_router, prefix=api_v1)
 app.include_router(last_mile_router, prefix=api_v1)
 app.include_router(stream_router, prefix=api_v1)
+app.include_router(fares_router, prefix=api_v1)
+app.include_router(payments_router, prefix=api_v1)
+app.include_router(priority_router, prefix=api_v1)
+app.include_router(safety_router, prefix=api_v1)
 
 @app.get("/")
 def root():

@@ -49,6 +49,8 @@ class Schedule(Base):
     route_id = Column(Integer, ForeignKey("routes.id"), nullable=False)
     departure_time = Column(String(8), nullable=False)  # HH:MM:SS
     day_of_week = Column(String(20), default="ALL")    # ALL, WEEKDAY, WEEKEND
+    schedule_type = Column(String(20), default="REGULAR")  # REGULAR, EXAM_DAY, HOLIDAY
     frequency_mins = Column(Integer, default=15)
 
     route = relationship("Route", back_populates="schedules")
+

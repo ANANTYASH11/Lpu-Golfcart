@@ -23,12 +23,14 @@ interface UberHomeViewProps {
   onBookRide: () => void;
   onExploreFeatures: () => void;
   onOpenProfile?: () => void;
+  onNavigate?: (view: string) => void;
 }
 
 export default function UberHomeView({
   onBookRide,
   onExploreFeatures,
   onOpenProfile,
+  onNavigate,
 }: UberHomeViewProps) {
   const { mode, toggleTheme } = useTheme();
   const [selectedVehicle, setSelectedVehicle] = useState<'cart' | 'shuttle' | 'rickshaw'>('cart');
@@ -1042,23 +1044,60 @@ export default function UberHomeView({
             </div>
 
             {/* Menu Links */}
-            <div className="py-12 flex-1 flex flex-col justify-center max-w-xl mx-auto w-full space-y-5">
+            <div className="py-8 flex-1 flex flex-col justify-center max-w-xl mx-auto w-full space-y-4">
               {[
-                { label: 'Book a Ride', action: () => { setMenuOpen(false); onBookRide(); } },
-                { label: 'Live Shuttles & Arrivals', action: () => { setMenuOpen(false); onExploreFeatures(); } },
-                { label: 'Fare Calculator', action: () => { setMenuOpen(false); onExploreFeatures(); } },
-                { label: 'Timetable & Peak Hours', action: () => { setMenuOpen(false); onExploreFeatures(); } },
-                { label: 'Campus Map', action: () => { setMenuOpen(false); onBookRide(); } },
-                { label: 'Priority Access', action: () => { setMenuOpen(false); onExploreFeatures(); } },
-                { label: 'Campus Safety & SOS', action: () => { setMenuOpen(false); onExploreFeatures(); } },
+                {
+                  label: 'Book a Ride',
+                  hint: '2 min away',
+                  action: () => { setMenuOpen(false); onBookRide(); }
+                },
+                {
+                  label: 'Live Shuttles & Arrivals',
+                  hint: 'Next shuttle 4 min',
+                  action: () => { setMenuOpen(false); onNavigate ? onNavigate('shuttles') : onExploreFeatures(); }
+                },
+                {
+                  label: 'Fare Calculator',
+                  hint: '₹0 - ₹15 flat',
+                  action: () => { setMenuOpen(false); onNavigate ? onNavigate('fare_calc') : onExploreFeatures(); }
+                },
+
+                {
+                  label: 'Timetable & Peak Hours',
+                  hint: '3 rush peaks today',
+                  action: () => { setMenuOpen(false); onNavigate ? onNavigate('timetable') : onExploreFeatures(); }
+                },
+                {
+                  label: 'Campus Map',
+                  hint: 'Live 3D Fleet',
+                  action: () => { setMenuOpen(false); onNavigate ? onNavigate('map') : onBookRide(); }
+                },
+                {
+                  label: 'Priority Access',
+                  hint: 'Fast-track pass',
+                  action: () => { setMenuOpen(false); onNavigate ? onNavigate('priority') : onExploreFeatures(); }
+                },
+                {
+                  label: 'Campus Safety & SOS',
+                  hint: '24x7 Beacon',
+                  action: () => { setMenuOpen(false); onNavigate ? onNavigate('safety') : onExploreFeatures(); }
+                },
+
               ].map((link) => (
                 <button
                   key={link.label}
                   onClick={link.action}
-                  className="text-left text-2xl sm:text-3xl font-extrabold tracking-tight hover:opacity-70 transition-opacity flex items-center justify-between group"
+                  className="text-left py-2 px-3 rounded-xl hover:bg-[#F3F3F3] dark:hover:bg-[#1C1C1C] transition-colors flex items-center justify-between group"
                 >
-                  <span>{link.label}</span>
-                  <ArrowRight className="w-6 h-6 opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
+                  <div className="flex items-center gap-3">
+                    <span className="text-xl sm:text-2xl font-extrabold tracking-tight group-hover:translate-x-1 transition-transform">
+                      {link.label}
+                    </span>
+                    <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-black/5 dark:bg-white/10 text-[#5E5E5E] dark:text-[#A6A6A6] border border-black/5 dark:border-white/10">
+                      {link.hint}
+                    </span>
+                  </div>
+                  <ArrowRight className="w-5 h-5 opacity-40 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
                 </button>
               ))}
             </div>

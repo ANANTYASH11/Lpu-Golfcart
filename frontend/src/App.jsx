@@ -6,6 +6,13 @@ import UberBookingView from './views/UberBookingView';
 import UberFeaturesView from './views/UberFeaturesView';
 import UberDriverView from './views/UberDriverView';
 import UberAdminView from './views/UberAdminView';
+import LiveShuttlesView from './views/LiveShuttlesView';
+import TimetablePeakView from './views/TimetablePeakView';
+import CampusMapView from './views/CampusMapView';
+import WalletView from './views/WalletView';
+import PriorityAccessView from './views/PriorityAccessView';
+import { CampusSafetySosView } from './views/CampusSafetySosView';
+import { FareCalculatorView } from './views/FareCalculatorView';
 import BusPreviewView from './views/BusPreviewView';
 import RickshawPreviewView from './views/RickshawPreviewView';
 import MapFleetView from './views/MapFleetView';
@@ -16,6 +23,13 @@ function AppContent() {
     if (typeof window !== 'undefined') {
       const p = window.location.pathname;
       if (p === '/book' || p === '/booking') return 'book';
+      if (p === '/shuttles' || p === '/arrivals') return 'shuttles';
+      if (p === '/timetable' || p === '/schedule') return 'timetable';
+      if (p === '/fare-calc' || p === '/fares' || p === '/calculator') return 'fare_calc';
+      if (p === '/map') return 'map';
+      if (p === '/wallet') return 'wallet';
+      if (p === '/priority') return 'priority';
+      if (p === '/safety' || p === '/sos') return 'safety';
       if (p === '/app' || p === '/features' || p === '/services') return 'features';
       if (p === '/driver') return 'driver';
       if (p === '/admin') return 'admin';
@@ -31,6 +45,20 @@ function AppContent() {
       const p = window.location.pathname;
       if (p === '/book' || p === '/booking') {
         setActiveView('book');
+      } else if (p === '/shuttles' || p === '/arrivals') {
+        setActiveView('shuttles');
+      } else if (p === '/timetable' || p === '/schedule') {
+        setActiveView('timetable');
+      } else if (p === '/fare-calc' || p === '/fares' || p === '/calculator') {
+        setActiveView('fare_calc');
+      } else if (p === '/map') {
+        setActiveView('map');
+      } else if (p === '/wallet') {
+        setActiveView('wallet');
+      } else if (p === '/priority') {
+        setActiveView('priority');
+      } else if (p === '/safety' || p === '/sos') {
+        setActiveView('safety');
       } else if (p === '/app' || p === '/features' || p === '/services') {
         setActiveView('features');
       } else if (p === '/driver') {
@@ -55,6 +83,13 @@ function AppContent() {
     setActiveView(view);
     let targetPath = '/';
     if (view === 'book') targetPath = '/book';
+    else if (view === 'shuttles') targetPath = '/shuttles';
+    else if (view === 'timetable') targetPath = '/timetable';
+    else if (view === 'fare_calc') targetPath = '/fare-calc';
+    else if (view === 'map') targetPath = '/map';
+    else if (view === 'wallet') targetPath = '/wallet';
+    else if (view === 'priority') targetPath = '/priority';
+    else if (view === 'safety') targetPath = '/safety';
     else if (view === 'features') targetPath = '/app';
     else if (view === 'driver') targetPath = '/driver';
     else if (view === 'admin') targetPath = '/admin';
@@ -74,12 +109,63 @@ function AppContent() {
           onBookRide={() => handleViewChange('book')}
           onExploreFeatures={() => handleViewChange('features')}
           onOpenProfile={() => handleViewChange('features')}
+          onNavigate={(view) => handleViewChange(view)}
         />
       )}
 
       {activeView === 'book' && (
         <UberBookingView onBack={() => handleViewChange('home')} />
       )}
+
+      {activeView === 'shuttles' && (
+        <LiveShuttlesView
+          onBack={() => handleViewChange('home')}
+          onOpenMap={() => handleViewChange('map')}
+        />
+      )}
+
+      {activeView === 'timetable' && (
+        <TimetablePeakView
+          onBack={() => handleViewChange('home')}
+          onBookRide={() => handleViewChange('book')}
+        />
+      )}
+
+      {activeView === 'fare_calc' && (
+        <FareCalculatorView
+          onBack={() => handleViewChange('home')}
+          onBookRide={() => handleViewChange('book')}
+        />
+      )}
+
+
+      {activeView === 'map' && (
+        <CampusMapView
+          onBack={() => handleViewChange('home')}
+          onBookRide={() => handleViewChange('book')}
+        />
+      )}
+
+      {activeView === 'wallet' && (
+        <WalletView
+          onBack={() => handleViewChange('home')}
+          onBookRide={() => handleViewChange('book')}
+        />
+      )}
+
+      {activeView === 'priority' && (
+        <PriorityAccessView
+          onBack={() => handleViewChange('home')}
+          onBookRide={() => handleViewChange('book')}
+        />
+      )}
+
+      {activeView === 'safety' && (
+        <CampusSafetySosView
+          onBack={() => handleViewChange('home')}
+        />
+      )}
+
 
       {activeView === 'features' && (
         <UberFeaturesView
@@ -89,6 +175,13 @@ function AppContent() {
           onNavigateTo={(path) => {
             if (path === '/driver') handleViewChange('driver');
             else if (path === '/admin') handleViewChange('admin');
+            else if (path === '/shuttles') handleViewChange('shuttles');
+            else if (path === '/timetable') handleViewChange('timetable');
+            else if (path === '/fare-calc' || path === '/fares') handleViewChange('fare_calc');
+            else if (path === '/map') handleViewChange('map');
+            else if (path === '/wallet') handleViewChange('wallet');
+            else if (path === '/priority') handleViewChange('priority');
+            else if (path === '/safety' || path === '/sos') handleViewChange('safety');
             else handleViewChange('home');
           }}
         />

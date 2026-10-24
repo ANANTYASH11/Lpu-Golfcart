@@ -49,9 +49,24 @@ export const api = {
 
   // Module 1: Student Transport
   getStops: () => request('/transport/stops'),
+  getStopsNearMe: (lat, lon, limit = 5) => request(`/transport/stops/near-me?lat=${lat}&lon=${lon}&limit=${limit}`),
   getRoute: (id) => request(`/transport/routes/${id}`),
   searchTrips: (fromId, toId) => request(`/transport/trips/search?from=${fromId}&to=${toId}`),
   getStopArrivals: (stopId) => request(`/transport/stops/${stopId}/arrivals`),
+  getShuttleProgress: (shuttleId) => request(`/transport/shuttle/${shuttleId}/progress`),
+  getTimetable: (scheduleType = 'REGULAR') => request(`/transport/timetable?schedule_type=${scheduleType}`),
+  getNextDepartures: (stopId) => request(`/transport/timetable/next-departures/${stopId}`),
+  exportTimetableCsvUrl: () => `${API_BASE}/transport/timetable/export-csv`,
+  importTimetableCsv: (formData) => {
+    const token = getAuthToken();
+    return fetch(`${API_BASE}/transport/timetable/import-csv`, {
+      method: 'POST',
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {})
+      },
+      body: formData
+    }).then(res => res.json());
+  },
   getJourney: (fromId, toId) => request(`/transport/journey?from=${fromId}&to=${toId}`),
 
   // Module 2: Shuttle Operations
@@ -70,19 +85,22 @@ export const api = {
   cancelTrip: (id, reason) => request(`/operations/trips/${id}/cancel`, { method: 'POST', body: JSON.stringify({ reason }) }),
   undoTrip: (id) => request(`/operations/trips/${id}/undo`, { method: 'POST' }),
 
+  // Fare Engine & Calculator
+  calculateFare: (pickupStopId, dropStopId, vehicleType = null, isPriority = null) => {
+    let url = `/fares/calculate?pickup_stop_id=${pickupStopId}&drop_stop_id=${dropStopId}`;
+    if (vehicleType) url += `&vehicle_type=${vehicleType}`;
+    if (isPriority !== null) url += `&is_priority=${isPriority}`;
+    return request(url);
+  },
+  getFareRules: () => request('/fares/rules'),
+
   // Module 3: Last-Mile & Golf Cart Booking
   getStandAvailability: (stopId) => request(`/lastmile/availability${stopId ? `?stop_id=${stopId}` : ''}`),
   getFareQuote: (fromStandId, toStandId) => request(`/lastmile/fare?from_stand_id=${fromStandId}&to_stand_id=${toStandId}`),
   getAvailableCarts: () => request('/lastmile/carts/available'),
-  createBooking: (pickupStopId, dropStopId, passengerCount, isPriority, priorityReason) => request('/lastmile/bookings', {
+  createBooking: (params) => request('/lastmile/bookings', {
     method: 'POST',
-    body: JSON.stringify({
-      pickup_stop_id: pickupStopId,
-      drop_stop_id: dropStopId,
-      passenger_count: passengerCount,
-      is_priority: isPriority,
-      priority_reason: priorityReason
-    })
+    body: JSON.stringify(params)
   }),
   getBooking: (id) => request(`/lastmile/bookings/${id}`),
   getActiveStudentBooking: () => request('/lastmile/bookings/student/active'),
@@ -90,5 +108,91 @@ export const api = {
   updateBookingStatus: (id, action, reason) => request(`/lastmile/bookings/${id}/status`, {
     method: 'PATCH',
     body: JSON.stringify({ action, reason })
-  })
+  }),
+  cancelBooking: (id, reason = 'Cancelled by user') => request(`/lastmile/bookings/${id}/cancel`, {
+    method: 'POST',
+    body: JSON.stringify({ reason })
+  }),
+  rateBooking: (id, rating, feedback = '') => request(`/lastmile/bookings/${id}/rate`, {
+    method: 'POST',
+    body: JSON.stringify({ rating, feedback })
+  }),
+
+  // Payments & Campus Wallet (Razorpay Test Mode)
+  createPaymentOrder: (amountPaise, bookingId = null) => request('/payments/create-order', {
+    method: 'POST',
+    body: JSON.stringify({ amount_paise: amountPaise, booking_id: bookingId })
+  }),
+  verifyPayment: (razorpayOrderId, razorpayPaymentId, razorpaySignature, bookingId = null) => request('/payments/verify', {
+    method: 'POST',
+    body: JSON.stringify({
+      razorpay_order_id: razorpayOrderId,
+      razorpay_payment_id: razorpayPaymentId,
+      razorpay_signature: razorpaySignature,
+      booking_id: bookingId
+    })
+  }),
+  getWalletBalance: () => request('/payments/wallet/balance'),
+  getWalletLedger: () => request('/payments/wallet/ledger'),
+  topupWallet: (amountInr) => request('/payments/wallet/topup', {
+    method: 'POST',
+    body: JSON.stringify({ amount_inr: amountInr })
+  }),
+  payWithWallet: (bookingId) => request('/payments/wallet/pay', {
+    method: 'POST',
+    body: JSON.stringify({ booking_id: bookingId })
+  }),
+  getPaymentReceipt: (bookingId) => request(`/payments/receipt/${bookingId}`),
+  getAdminCollections: () => request('/payments/admin/collections'),
+
+  // Priority Access & Document Vault
+  applyPriority: (formData) => {
+    const token = getAuthToken();
+    return fetch(`${API_BASE}/priority/apply`, {
+      method: 'POST',
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {})
+      },
+      body: formData
+    }).then(async (res) => {
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.detail || 'Priority application submission failed');
+      }
+      return res.json();
+    });
+  },
+  getPriorityStatus: () => request('/priority/status'),
+  getPriorityDocumentUrl: (id) => `${API_BASE}/priority/document/${id}`,
+  getAdminPriorityApplications: (status = null) => request(`/priority/admin/applications${status ? `?status_filter=${status}` : ''}`),
+  reviewPriorityApplication: (id, action, notes = '', validityDays = 180) => request(`/priority/admin/applications/${id}/review`, {
+    method: 'POST',
+    body: JSON.stringify({ action, notes, validity_days: validityDays })
+  }),
+
+  // Campus Safety & SOS Emergency Beacon
+  getSafetyHelpline: () => request('/safety/helpline'),
+  triggerSos: (params) => request('/safety/sos/trigger', {
+    method: 'POST',
+    body: JSON.stringify(params)
+  }),
+  updateSosLocation: (sosId, params) => request(`/safety/sos/${sosId}/location`, {
+    method: 'POST',
+    body: JSON.stringify(params)
+  }),
+  resolveSos: (sosId, resolutionNotes = '') => request(`/safety/sos/${sosId}/resolve`, {
+    method: 'POST',
+    body: JSON.stringify({ resolution_notes: resolutionNotes })
+  }),
+  getActiveSosBeacons: () => request('/safety/sos/active'),
+  submitIncidentReport: (params) => request('/safety/incident/report', {
+    method: 'POST',
+    body: JSON.stringify(params)
+  }),
+  getMyIncidentReports: () => request('/safety/incident/my-reports'),
+  getAdminIncidents: () => request('/safety/admin/incidents')
 };
+
+
+
+
