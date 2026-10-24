@@ -1,0 +1,158 @@
+@import "tailwindcss";
+
+@variant dark (&:where(.dark, .dark *));
+
+:root {
+  --bg: #FFFFFF;
+  --surface: #F3F3F3;
+  --surface-hover: #EAEAEA;
+  --text: #000000;
+  --muted: #5E5E5E;
+  --border: #E2E2E2;
+  --primary: #000000;
+  --primary-hover: #1F1F1F;
+  --primary-text: #FFFFFF;
+  --accent: #276EF1;
+  --success: #05A357;
+  --warning: #FFC043;
+  --danger: #E11900;
+}
+
+html.dark {
+  --bg: #000000;
+  --surface: #1C1C1C;
+  --surface-hover: #2A2A2A;
+  --text: #FFFFFF;
+  --muted: #A6A6A6;
+  --border: #333333;
+  --primary: #FFFFFF;
+  --primary-hover: #E0E0E0;
+  --primary-text: #000000;
+  --accent: #276EF1;
+  --success: #05A357;
+  --warning: #FFC043;
+  --danger: #E11900;
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+
+  body {
+    background-color: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+/* Uber Design System Utility Classes */
+.uber-btn-primary {
+  height: 56px;
+  min-height: 56px;
+  border-radius: 9999px; /* fully rounded per Uber spec */
+  background-color: var(--primary);
+  color: var(--primary-text);
+  font-weight: 600;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: background-color 0.15s ease;
+  border: none;
+  cursor: pointer;
+  text-decoration: none;
+  padding: 0 28px;
+}
+
+.uber-btn-primary:hover {
+  background-color: var(--primary-hover);
+}
+
+.uber-btn-secondary {
+  height: 56px;
+  min-height: 56px;
+  border-radius: 9999px; /* fully rounded per Uber spec */
+  background-color: var(--surface);
+  color: var(--text);
+  font-weight: 600;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: background-color 0.15s ease;
+  border: none;
+  cursor: pointer;
+  text-decoration: none;
+  padding: 0 28px;
+}
+
+.uber-btn-secondary:hover {
+  background-color: var(--surface-hover);
+}
+
+.uber-card {
+  border-radius: 12px;
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  transition: background-color 0.15s ease;
+}
+
+.uber-chip {
+  height: 36px;
+  border-radius: 9999px;
+  padding: 0 16px;
+  font-size: 14px;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background-color: var(--surface);
+  color: var(--text);
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.uber-chip:hover {
+  background-color: var(--surface-hover);
+}
+
+.uber-chip.active {
+  background-color: var(--primary);
+  color: var(--primary-text);
+}
+
+/* Soft floating sheet shadow only */
+.uber-sheet-shadow {
+  box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.08), 0 -1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.dark .uber-sheet-shadow {
+  box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.6), 0 -1px 2px rgba(255, 255, 255, 0.05);
+}
+
+.uber-floating-shadow {
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08), 0 2px 6px rgba(0, 0, 0, 0.04);
+}
+
+.dark .uber-floating-shadow {
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6), 0 1px 3px rgba(255, 255, 255, 0.05);
+}
+
+/* Hide scrollbars for a clean aesthetic */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
