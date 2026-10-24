@@ -1,0 +1,82 @@
+# Dependencies
+node_modules/
+frontend/node_modules/
+.pnp
+.pnp.js
+
+# Production build artifacts
+dist/
+dist-ssr/
+frontend/dist/
+frontend/dist-ssr/
+build/
+
+# Python artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+ENV/
+*.egg-info/
+.installed.cfg
+*.egg
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Databases
+*.db
+*.sqlite
+*.sqlite3
+
+# Environment and credentials
+.env
+.env.local
+.env.*.local
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Scratch & CDP test directories
+scratch_*
+scratch_*/
+
+# Root temporary scratch scripts & test screenshots
+carto_watermark_screenshot.png
+home_desktop_dark.png
+home_desktop_light.png
+home_mobile_dark.png
+home_mobile_light.png
+map_dark_z15.png
+map_dark_z17.png
+map_light_z15.png
+map_light_z17.png
+phase_a_lpu_map.png
+phase_a_lpu_map_cdp.png
+test.png
+capture_home_screens.cjs
+diagnose_carto.cjs
+inspect_map_requests.cjs
+run_verify.cjs
+scratch_screenshot.js
+test_map_tiles.cjs
+test_routing.py
+verify_booking_map.cjs
+verify_home_hero.cjs
+
+# IDE & OS files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
